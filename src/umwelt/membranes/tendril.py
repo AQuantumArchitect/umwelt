@@ -34,8 +34,12 @@ from __future__ import annotations
 
 import math
 
-from umwelt.membranes.egress import Action
+from typing import TYPE_CHECKING
+
 from umwelt._util import clamp01
+
+if TYPE_CHECKING:  # annotation-only: egress imports this module (Action lives there)
+    from umwelt.membranes.egress import Action
 
 
 def sticky_collapse(level: float, purity: float, prev: bool, scale: float = 0.5) -> bool:

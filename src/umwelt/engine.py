@@ -1270,6 +1270,15 @@ class BeliefEngine:
                         actions = actions + [auto_action]
                 except Exception as e:
                     logger.warning("%s tendril step failed: %s", getattr(tendril, "name", "tendril"), e)
+        # Route this tick's decisions through the egress surface when one is attached:
+        # shadow/recommend decisions are recorded for the app (the ghost layer), auto
+        # non-shadow ones go to the injected dispatcher. The result dict still carries
+        # every action either way — the surface routes, it never hides.
+        if actions and getattr(self, "output_surface", None) is not None:
+            try:
+                self.output_surface.route(actions, getattr(self, "tendrils", []))
+            except Exception as e:
+                logger.warning("output surface routing failed: %s", e)
 
         # ── Berry tape: advance the real geometric phase, then tick ──
         for name, cluster in self.field.clusters.items():

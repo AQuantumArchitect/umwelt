@@ -70,6 +70,7 @@ def build_engine(
     cluster_filter: "Callable[[object], bool] | None" = None,
     subdomains: bool | None = None,
     spec=None,
+    dispatch=None,
 ) -> "BeliefEngine":
     """Construct + fully wire a BeliefEngine: build → param fiber → declarative
     bindings → drivers → reward channels → param-norm + weight upgrades → whole-fiber
@@ -79,10 +80,13 @@ def build_engine(
     clusters it forecasts + their context); a live forebrain leaves it None.
 
     `spec` is the world: a DomainSpec, or a 'module:ATTR' string, else the UMWELT_SPEC
-    env. No spec anywhere → ValueError (there is no default domain). Output tendrils
-    stay empty here — P3 builds them from OutputSpec (engine.tendrils = []); until
-    then a fresh world boots sensor-first, which is also the law (every output enters
-    as a signal first)."""
+    env. No spec anywhere → ValueError (there is no default domain).
+
+    `dispatch` is the app's transport: a callable(Action) the OutputSurface invokes for
+    AUTO, non-shadow tendril decisions. None (the default) → every decision is recorded
+    on engine.output_surface.recommendations and nothing leaves the process — combined
+    with OutputSpec.shadow=True defaults, a fresh world decides visibly and dispatches
+    nothing until the app opts in (every output enters as a signal first)."""
     from umwelt.engine import BeliefEngine
     from umwelt.learning.calibration import CalibrationConfig
     from umwelt.substrate.population import PopulationConfig
@@ -137,6 +141,13 @@ def build_engine(
     # Periodic drivers — the domain's clocks, resolved through the driver registry.
     from umwelt.clocks.drivers import build_driver
     engine.drivers = [build_driver(d) for d in spec.drivers]
+
+    # Output tendrils — the spec's decisions, alive on the uniform surface (blocker 7):
+    # each OutputSpec becomes a SpecTendril (committed belief + decoder + gates), and the
+    # OutputSurface routes what they emit (shadow/recommend → recorded; auto → dispatch).
+    from umwelt.membranes.egress import OutputSurface, build_tendrils
+    engine.tendrils = build_tendrils(engine, spec)
+    engine.output_surface = OutputSurface(dispatch=dispatch)
 
     # Declarative reward-vocabulary extensions: assign spec params to channels
     # (a pattern ending "_" is a prefix, else exact — the registry idiom).
