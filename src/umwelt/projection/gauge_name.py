@@ -81,8 +81,14 @@ def register_known_place(name: str, lat: float, lon: float, deg_radius: float = 
 
 def _place(reservoir) -> str:
     """The engine's decoded location as a name: a known place if near one, else geohash5,
-    else nowhere (unlocated)."""
+    else nowhere (unlocated). Place is PROVENANCE, not radius: only an anchor grounded
+    by evidence (ground_anchor, or restored from an artifact that carries a fix) may
+    mint a token — long runs of field dynamics can drift an un-grounded qubit off
+    maximally-mixed, and that drift is not a coordinate anyone gave the engine
+    (found by a 13-day real-deployment replay; the 1-day proof never drifts that far)."""
     try:
+        if "geo" not in getattr(reservoir, "_grounded_anchors", ()):
+            return "nowhere"
         b = reservoir.location_bloch()
         if math.sqrt(sum(c * c for c in b)) < 0.5:      # maximally-mixed earth gear → blank floor
             return "nowhere"
