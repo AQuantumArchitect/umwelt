@@ -254,6 +254,45 @@ class SensorBridge:
         # with no grounded data source.
         self.touched_roles: set[tuple[str, str]] = set()
 
+        # Per-leaf TRUST WEB fusion (foresight): when attached, observe_targets FUSES every input to a
+        # leaf (redundant signals + forecast brains) through one learned conditional-trust web per
+        # (node, role) instead of last-wins. None = off → last-wins behaviour, byte-unchanged. Opt-in
+        # exactly as the origin gated it: UMWELT_TRUST_WEB auto-attaches at construction (UMWELT_TRUST_WEB_LEARN
+        # enables conservative consensus-grounded online learning; UMWELT_TRUST_QUBIT → qubit-backed reliability).
+        import os
+        self.trust_webs: "dict[tuple[str, str], object] | None" = None
+        self._trust_learn: bool = False
+        self._trust_qubit: bool = bool(os.environ.get("UMWELT_TRUST_QUBIT"))
+        if os.environ.get("UMWELT_TRUST_WEB"):
+            self.attach_trust_web(learn=bool(os.environ.get("UMWELT_TRUST_WEB_LEARN")))
+
+    def attach_trust_web(self, *, learn: bool = False, qubit: bool | None = None) -> None:
+        """Turn on per-leaf trust-web fusion in observe_targets. `learn` also enables conservative
+        consensus-grounded online learning. `qubit` (default: read UMWELT_TRUST_QUBIT) makes per-source
+        reliability a learned qubit instead of a scalar — a value-preserving upgrade (day-1 identical,
+        plus a purity = confidence-in-reliability DOF). Prior-initialized so day-1 fusion == today's
+        confidence-weighted observation; webs-off stays last-wins. Idempotent."""
+        import os
+        if self.trust_webs is None:
+            self.trust_webs = {}
+        self._trust_learn = bool(learn)
+        self._trust_qubit = (bool(os.environ.get("UMWELT_TRUST_QUBIT")) if qubit is None
+                             else bool(qubit))
+
+    def _new_trust_web(self):
+        """Factory for a per-leaf fuser — the qubit-backed variant when enabled, else classical."""
+        if getattr(self, "_trust_qubit", False):
+            from umwelt.foresight.qubit_trust_web import QubitTrustWeb
+            return QubitTrustWeb()
+        from umwelt.foresight.trust_web import TrustWeb
+        return TrustWeb()
+
+    def trust_web_snapshot(self) -> dict:
+        """Per-leaf web state ("node.role" → web.snapshot()) for the heritage pickle."""
+        if not self.trust_webs:
+            return {}
+        return {f"{n}.{r}": w.snapshot() for (n, r), w in self.trust_webs.items()}
+
     def node_params(self, zone: str) -> "ParameterBundle | None":
         """Get the ParameterBundle for a node, if any."""
         return self._node_params.get(zone)
@@ -457,6 +496,12 @@ class SensorBridge:
         these via QubitCluster.observe_qubit after field.step.
         """
         targets: dict[tuple[str, str], tuple[tuple[float, float, float], float, float]] = {}
+        # When the trust web is on, accumulate EVERY input per leaf (instead of last-wins) so the web
+        # can fuse them: leaf → {sensor_id: (target_z, conf)} + the strongest collapse_alpha among
+        # contributors (sets the snap rate).
+        fusing = self.trust_webs is not None
+        acc: dict[tuple[str, str], dict[str, tuple[float, float]]] = {}
+        amax: dict[tuple[str, str], float] = {}
         for sensor_id, raw_value in readings.items():
             binding = self.bindings.get(sensor_id)
             if binding is None or not binding.is_observe:
@@ -481,12 +526,48 @@ class SensorBridge:
             leaf = (binding.node, binding.qubit_role)
             self.touched_roles.add(leaf)
 
-            # Confidence scales the collapse strength (conf=0 → alpha=0 → no-op) and
-            # rides along so the engine can record it as a gauge quantity.
-            targets[leaf] = ((0.0, 0.0, target_z),
-                             effective_collapse_alpha(binding.collapse_alpha) * conf_brake(conf),
-                             conf)
+            if fusing:
+                acc.setdefault(leaf, {})[sensor_id] = (target_z, conf)
+                amax[leaf] = max(amax.get(leaf, 0.0),
+                                 effective_collapse_alpha(binding.collapse_alpha))
+            else:
+                # Confidence scales the collapse strength (conf=0 → alpha=0 → no-op) and
+                # rides along so the engine can record it as a gauge quantity.
+                targets[leaf] = ((0.0, 0.0, target_z),
+                                 effective_collapse_alpha(binding.collapse_alpha) * conf_brake(conf),
+                                 conf)
+
+        if fusing:
+            targets.update(self._fuse_leaves(acc, amax))
         return targets
+
+    def _fuse_leaves(
+        self, acc: dict[tuple[str, str], dict[str, tuple[float, float]]],
+        amax: dict[tuple[str, str], float],
+    ) -> dict[tuple[str, str], tuple[tuple[float, float, float], float, float]]:
+        """Fuse this tick's per-leaf inputs through each leaf's TrustWeb. One fused (target_z, conf) per
+        leaf, replacing last-wins; sources absent this tick but seen before are "down" and trigger their
+        peers' compensation. The collapse alpha rides the strongest contributor's collapse_alpha × the
+        fused confidence, so a single full-confidence signal reproduces the last-wins behaviour exactly."""
+        out: dict[tuple[str, str], tuple[tuple[float, float, float], float, float]] = {}
+        webs = self.trust_webs
+        if webs is None:
+            return out
+        for leaf, contribs in acc.items():
+            web = webs.get(leaf)
+            if web is None:
+                web = webs[leaf] = self._new_trust_web()
+            inputs = {sid: (z, conf, True) for sid, (z, conf) in contribs.items()}
+            z_f, conf_f = web.fuse(inputs)
+            # Conservative consensus-grounded online learning: only when ≥2 sources corroborate at high
+            # fused confidence (never train on a lone unverified read).
+            if self._trust_learn and len(inputs) >= 2 and conf_f > 0.6:
+                web.learn(inputs, z_f)
+            if conf_f <= 0.0:
+                continue  # fused no-op → leaf free-evolves
+            alpha = amax.get(leaf, 1.0) * conf_brake(conf_f)
+            out[leaf] = ((0.0, 0.0, z_f), alpha, conf_f)
+        return out
 
     def latest_value(
         self, node: str, role: str

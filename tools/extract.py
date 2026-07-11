@@ -96,6 +96,15 @@ P2 = [
     "reward/__init__", "reward/channel",
 ]
 
+# Phase 4 manifest — foresight (leaf_forecast/forecast_surface/forecast_rollout need hand
+# curation after; see the P4 notes in tools/RENAMES.md when done).
+P4 = [
+    "trust_web", "qubit_trust_web", "predictions", "leaf_forecast", "forecast_scopes",
+    "forecast_surface", "forecast_rollout", "forecast_comprehension",
+    "bpu_forecast", "bpu_dispatch", "dreaming", "dream_loop", "dream_topology",
+    "confounding", "learning_router",
+]
+
 # Phase 1 manifest: (source path relative to MEERKAT, dest module key in MAP)
 P1 = [
     "bloch", "density_matrix", "qubit_param", "qubit_ema", "cluster", "cumulant_cluster",
@@ -136,6 +145,14 @@ FROZEN: set[str] = {
     "learning/reward/__init__.py", "learning/reward/channel.py", "learning/reward/registry.py",
     "membranes/tendril.py", "membranes/ingress.py", "membranes/egress.py",
     "engine.py", "boot.py",
+    # P4 (foresight curated + confounding/router; graph_state/transparency curated)
+    "foresight/trust_web.py", "foresight/qubit_trust_web.py", "foresight/predictions.py",
+    "foresight/leaf_forecast.py", "foresight/forecast_scopes.py", "foresight/forecast_surface.py",
+    "foresight/forecast_rollout.py", "foresight/forecast_comprehension.py",
+    "foresight/bpu_forecast.py", "foresight/bpu_dispatch.py", "foresight/dreaming.py",
+    "foresight/dream_loop.py", "foresight/dream_topology.py",
+    "learning/confounding.py", "learning/learning_router.py",
+    "projection/graph_state.py", "projection/transparency.py",
 }
 
 _FROM_REL = re.compile(r"^(\s*)from \.([a-zA-Z_.]+) import (.+)$")
@@ -212,7 +229,7 @@ def extract(mod: str, force: bool = False) -> list[str]:
 
 def main() -> None:
     force = "--force" in sys.argv
-    todo = P2 if "p2" in sys.argv else P1
+    todo = P4 if "p4" in sys.argv else (P2 if "p2" in sys.argv else P1)
     print(f"extracting {len(todo)} modules from {MEERKAT}")
     hand_work = 0
     for mod in todo:

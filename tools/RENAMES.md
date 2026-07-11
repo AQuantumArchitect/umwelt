@@ -48,7 +48,7 @@ Renames made during extraction that LATER phases must apply when porting consume
 | bridge upgrade_to_param_norms ROLE_PARAM_MAP | register_range_param_prefixes() (empty by default) |
 | bridge CONTINUOUS_ROLES = {"environment"} | SensorBridge.CONTINUOUS_ROLES (empty set; domain adds its continuous roles) |
 | SensorBinding.is_event_driven (_EVENT_DRIVEN_ROLES set) | role_input_mode(role) == "unitary" (registry-derived) |
-| bridge trust_webs / attach_trust_web / _fuse_leaves / trust_web_snapshot | CUT (trust_web/qubit_trust_web not yet ported; observe_targets is last-wins) |
+| bridge trust_webs / attach_trust_web / _fuse_leaves / trust_web_snapshot | RESTORED in ingress.py (P4) against foresight.trust_web/qubit_trust_web; opt-in via UMWELT_TRUST_WEB (auto-attaches at ingress construction; UMWELT_TRUST_WEB_LEARN / UMWELT_TRUST_QUBIT); webs-off = last-wins, prior-init so day-1 == confidence-weighted average |
 | bridge sensor_kind() | CUT (domain-vocabulary UI helper) |
 | register() merged_zone_role choke point | CUT (merge transform not yet in umwelt; re-add at engine port if merge lands) |
 | MEERKAT_CONF_BRAKE_GAMMA / MEERKAT_COLLAPSE_ALPHA | UMWELT_CONF_BRAKE_GAMMA / UMWELT_COLLAPSE_ALPHA |
@@ -82,3 +82,20 @@ reservoir_state.pkl → engine_state.pkl (UMWELT_STATE_PATH).
 | field_unify.to_manifold(zone=) / manifold_from_pickle(zone=) | node= kwarg |
 | ground.occupied/active + occupied_zones/active_zones | NodeState.asserted(role) / asserted_nodes(role) |
 | ground.COLLAPSE_EMOJI maps | register_collapse_emoji() (empty by default) |
+
+## P4 foresight/learning curation
+| meerkat | umwelt |
+|---|---|
+| leaf_forecast: `from .celestial import sun_bloch, moon_phase_norm` in `_feature` | register_leaf_feature(name, fn) registry (datetime→fixed-width features); empty default (domain-free). Origin's celestial builder returns via the smarthome example. Wall-clock cyclic time_features stay built in. |
+| leaf_forecast: `WeatherForecast(1, [id], …)` | `OnlineRegressor(1, [id], …, error_mode="mean_abs")` (the ONE regressor; WeatherForecast subclass not ported) |
+| forecast_surface / forecast_rollout: `OutputSurface.DEFAULT_FORECAST_LEAVES` | `forecast_surface.DEFAULT_FORECAST_LEAVES` (self-contained, empty tuple by default; forecast emission is a foresight concern, NOT on the action-router egress OutputSurface) |
+| forecast_rollout.DissolvedCelestialForecast | DissolvedDriverForecast (generic periodic-driver dissolve; kept as reusable machinery) |
+| forecast_rollout.make_celestial_forecast / make_location_forecast / DissolvedLocationForecast (LOCATION_LEAVES, LocationForecastRunner, CelestialForecast) | CUT (call sites gone in P2; broken meerkat imports). Kept: FieldRolloutForecaster, DissolvedForecastSurface, DissolvedDriverForecast, make_forecast_surface. |
+| bpu_forecast/bpu_dispatch: `from . import datastream_health as dh` | try/except ImportError → inline no-op `_DHShim` (ENRICHED/DECOHERED consts + faithful stream_record dict). Health emission is optional telemetry. |
+| bpu_forecast: `from . import hrt_runner` | try/except ImportError → `hrt_runner` shim class (available()==False → CPU path; infer() raises). Accelerator runtime is origin-only. |
+| dream_loop `_events_db_path`: `from ..core.config import Settings; Settings().db_path` | `os.environ.get("UMWELT_DB_PATH") or "umwelt_events.db"` |
+| dream_topology STUDIO_FACET_STREAM / ROOM_FACET_STREAM tables + default_resolve | register_role_stream()/default_resolve() over an empty `_ROLE_STREAM` (domain-free; origin's role→stream table → its example). presence_activity_pairs → facet_pairs(field, node, lead_facet=, follow_facets=) (parametric). |
+| dreaming m_relocate_presence (hardcoded room list) | m_relocate_regions over register_dream_region()/`_REGION_VOCAB` (empty default → no-op). MUTATIONS["relocate"] rebound. |
+| dreaming `from projection.gauge import is_siesta` / `is_siesta(phase)` | `in_rest_window` / `in_rest_window(phase)` (per gauge rename) |
+| forecast_scopes FORECAST_SCOPES (Austin house catalog) | register_scope() over empty FORECAST_SCOPES (retired module; helpers kept for reference) |
+| dream_loop/dreaming should_dream(solar_phase=…) param | KEPT as-is (underscore-joined, not a lint hit; renaming would churn ported tests) |
