@@ -59,6 +59,8 @@ MAP = {
     "teacher": "learning.teacher", "approach": "learning.approach",
     "seed_profile": "learning.seed_profile", "embedder": "learning.embedder",
     "reward.registry": "learning.reward.registry", "reward.channel": "learning.reward.channel",
+    "adaptive_sampling": "learning.adaptive_sampling", "meta_stack": "learning.meta_stack",
+    "reward/__init__": "learning.reward.__init__", "reward/channel": "learning.reward.channel",
     "trust_web": "foresight.trust_web", "qubit_trust_web": "foresight.qubit_trust_web",
     "predictions": "foresight.predictions", "leaf_forecast": "foresight.leaf_forecast",
     "forecast_scopes": "foresight.forecast_scopes", "forecast_surface": "foresight.forecast_surface",
@@ -82,6 +84,17 @@ CORE_MAP = {
     "meerkat.core.event_replay": "umwelt.events",
     "meerkat.sensors.bridge": "umwelt.spec.roles",   # role classifiers; normalizers hand-split
 }
+
+# Phase 2 manifest — the mechanical subset (engine.py/boot.py/ingress + training_backbone
+# are hand-curated separately; teacher.py stays behind: an audio-edge application).
+P2 = [
+    "adaptive_clock", "cadence_dial", "compute_scheduler",
+    "regressor", "universal_learner", "training", "adaptive_sampling", "meta_stack",
+    "calibration", "coupling_learn", "competence", "autonomy", "agency", "attention",
+    "context", "context_learning", "surprise_tape", "stream_tape", "approach",
+    "seed_profile", "embedder", "observation_trust", "runner", "tendril",
+    "reward/__init__", "reward/channel",
+]
 
 # Phase 1 manifest: (source path relative to MEERKAT, dest module key in MAP)
 P1 = [
@@ -110,6 +123,19 @@ FROZEN: set[str] = {
     "substrate/web_topology.py", "substrate/graph.py", "substrate/ground.py",
     "projection/gauge.py", "projection/gauge_name.py", "projection/emoji.py",
     "projection/shelf.py", "clocks/phi_clock.py", "learning/meta_idioms.py",
+    # P2 (all curated: blockers 2/5/6, drivers/anchors generalization, vocabulary pass)
+    "clocks/adaptive_clock.py", "clocks/cadence_dial.py", "clocks/compute_scheduler.py",
+    "clocks/drivers.py", "clocks/berry_tape.py",
+    "learning/regressor.py", "learning/universal_learner.py", "learning/training.py",
+    "learning/adaptive_sampling.py", "learning/meta_stack.py", "learning/calibration.py",
+    "learning/coupling_learn.py", "learning/competence.py", "learning/autonomy.py",
+    "learning/agency.py", "learning/attention.py", "learning/context.py",
+    "learning/context_learning.py", "learning/surprise_tape.py", "learning/stream_tape.py",
+    "learning/approach.py", "learning/seed_profile.py", "learning/embedder.py",
+    "learning/observation_trust.py", "learning/runner.py", "learning/training_backbone.py",
+    "learning/reward/__init__.py", "learning/reward/channel.py", "learning/reward/registry.py",
+    "membranes/tendril.py", "membranes/ingress.py", "membranes/egress.py",
+    "engine.py", "boot.py",
 }
 
 _FROM_REL = re.compile(r"^(\s*)from \.([a-zA-Z_.]+) import (.+)$")
@@ -186,7 +212,7 @@ def extract(mod: str, force: bool = False) -> list[str]:
 
 def main() -> None:
     force = "--force" in sys.argv
-    todo = P1
+    todo = P2 if "p2" in sys.argv else P1
     print(f"extracting {len(todo)} modules from {MEERKAT}")
     hand_work = 0
     for mod in todo:

@@ -24,7 +24,7 @@ Residual nuance: an EXTREME-range value (z≈±1) is geometrically near-pure alr
 its boundary starts more confident than a mid-range one. Minor; the common (mid-range) case settles.
 
 See `plans/noble-sleeping-yao.md` for the full pilot context. If this proves out
-on `celestial_alpha`, the same `QubitBackedParam` carries the rest of the fiber.
+on `driver_alpha`, the same `QubitBackedParam` carries the rest of the fiber.
 """
 from __future__ import annotations
 from umwelt._util import clamp01

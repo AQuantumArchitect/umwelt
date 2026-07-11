@@ -29,6 +29,14 @@ ALLOW: dict[str, set[str]] = {
     # plus the comment/docstring lines documenting exactly those. "meerkat" is the
     # provenance citation in the module docstring.
     "spec/schema.py": {"zone", "meerkat"},
+    # training_backbone.py: "zone" is CODE — _apply_spec_bindings reads BindingSpec.zone
+    # and passes SensorBridge.register(zone=…), both field/kwarg names kept for
+    # signature-compatibility with the origin seam (same rationale as spec/schema.py).
+    "learning/training_backbone.py": {"zone"},
+    # ingress.py: "zone" is CODE — SensorBridge.register(zone=...) / node_params(zone)
+    # keep the origin seam's kwarg name so BindingSpec.zone and ported callers register
+    # unchanged (apply_spec_bindings passes zone=b.zone).
+    "membranes/ingress.py": {"zone"},
 }
 
 

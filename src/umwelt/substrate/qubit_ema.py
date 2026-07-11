@@ -4,7 +4,7 @@ The calibration loop keeps several per-cluster EMAs (`_surprise_ema`, `_tracking
 `_collapse_rate_ema`) as plain `dict[str, float]`. Each is updated by the textbook recurrence
 `ema ← α·signal + (1−α)·prev` — which is EXACTLY a partial-collapse `observe_qubit` at α toward the
 signal: `z ← (1−α)z + α·target_z`, so the rescaled value `v ← (1−α)v + α·signal`. So the EMA dict is
-a classical halo learner that already has a qubit form — the same move that made `celestial_alpha`
+a classical halo learner that already has a qubit form — the same move that made `driver_alpha`
 (qubit_param.QubitBackedParam) and the trust web (qubit_trust_web.QubitTrustWeb) qubits.
 
 This module supplies that form as a drop-in for the dict:

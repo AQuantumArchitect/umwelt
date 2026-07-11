@@ -38,6 +38,35 @@ Renames made during extraction that LATER phases must apply when porting consume
 | field.house_view() | REMOVED (app-side rendering) |
 | emoji.ROLE_EMOJI house maps | register_role_emoji()/register_node_icon() (maps → smarthome example) |
 | gauge_name._KNOWN_PLACES austin | register_known_place() (empty by default) |
+| sensors/bridge.py (module) | membranes/ingress.py |
+| bindings.apply_spec_bindings(bridge, spec=None) | ingress.apply_spec_bindings(bridge, spec) — spec REQUIRED, no default domain |
+| bridge.zones (property) | bridge.bound_nodes |
+| bridge.fresh_presence_zones(ttl) | bridge.fresh_nodes(role, ttl_seconds) — role now a parameter |
+| bridge.hebbian_celestial_update | bridge.hebbian_driver_update |
+| bridge SENSOR_PRESETS (11-entry table) | register_sensor_preset() (empty by default) |
+| bridge _ROLE_EVENT_TYPE table | register_event_type() (empty by default; unregistered → "sensor") |
+| bridge upgrade_to_param_norms ROLE_PARAM_MAP | register_range_param_prefixes() (empty by default) |
+| bridge CONTINUOUS_ROLES = {"environment"} | SensorBridge.CONTINUOUS_ROLES (empty set; domain adds its continuous roles) |
+| SensorBinding.is_event_driven (_EVENT_DRIVEN_ROLES set) | role_input_mode(role) == "unitary" (registry-derived) |
+| bridge trust_webs / attach_trust_web / _fuse_leaves / trust_web_snapshot | CUT (trust_web/qubit_trust_web not yet ported; observe_targets is last-wins) |
+| bridge sensor_kind() | CUT (domain-vocabulary UI helper) |
+| register() merged_zone_role choke point | CUT (merge transform not yet in umwelt; re-add at engine port if merge lands) |
+| MEERKAT_CONF_BRAKE_GAMMA / MEERKAT_COLLAPSE_ALPHA | UMWELT_CONF_BRAKE_GAMMA / UMWELT_COLLAPSE_ALPHA |
+| QuantumReservoir | BeliefEngine (engine.py keeps `QuantumReservoir = BeliefEngine` alias) |
+| build_reservoir(...) | boot.build_engine(...) — spec REQUIRED (arg / "module:ATTR" / UMWELT_SPEC); no `actuators=` flag (tendrils = P3 OutputSpec) |
+| reservoir._anchor_solar_clock + celestial_targets machinery | engine._anchor_drivers(now, explicit) over injected `engine.drivers` |
+| reservoir.set_celestial_targets(targets, forecast_labels) | engine.set_driver_targets(...) |
+| reservoir.celestial_anticipation / celestial_forecast_labels / celestial_targets | engine.driver_anticipation / driver_forecast_labels / driver_targets |
+| reservoir.location_bloch()/location_latlon()/location_pin_target()/_anchor_earth_gear | engine.anchor_bloch/anchor_value/anchor_pin_target/delocate_anchor (+ thin location_* compat over the "geo" anchor) |
+| calibration.celestial_{forecast,anticipation,anticipation_snr} attrs, _calibrate_celestial, celestial_{enabled,interval,obs_sigma,stride}, stats "celestial_updates" | driver_* equivalents (_calibrate_drivers; stats "driver_updates") |
+| reservoir.clock_snapshot() {"local_solar_time": …} | engine.clock_snapshot() {driver.name: …} (per injected driver) |
+| observe path: bridge's energy flip (active → z = −1) | engine un-flips for NON-registered-observe roles (spec force_observe keeps normalizer's +pole = ground.asserted) |
+| reservoir save keys location_grounded / ac_use_seed_baseline / phi_time | anchors_grounded (list) / DROPPED / DROPPED (loader maps legacy location_grounded → "geo") |
+| load order: …→ hamiltonians → population → fractal_stack | …→ population → fractal_stack → hamiltonians/cumulant grafts LAST (stack load re-projects H; saved H_base must win for canon-hash roundtrip) |
+| autonomy REGISTRY (4-row Austin catalog) | register_actuator_autonomy() (empty by default) |
+| coupling_learn.measured_contrast(a_type="presence", b_type="motion_score") | a_type/b_type REQUIRED kwargs (stream types are domain vocabulary) |
+| berry_tape.stamp_collapse(zone=…) | clocks/berry_tape.stamp_collapse(node=…) |
+| field_unify.to_manifold(zone=)/reservoir.as_manifold(zone=) | node= kwarg (see Env table note) |
 
 ## Cut from the root fiber (return via OutputSpec gates/coupling or app registration)
 dimmer_*, ac_*, fan_flush_enabled, sleep_beta_steer_alpha, light_tendril_enabled,
