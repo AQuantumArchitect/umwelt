@@ -117,7 +117,8 @@ demo is owed) and free-energy reward channels (framework shipped; effect sizes o
 ## The ledger
 
 [CLAIMS.md](CLAIMS.md) sorts every claim by tier — measured-and-test-pinned here,
-measured on the origin deployment, designed-but-owed, and **DENIED**: the full Belavkin
+measured on the origin deployment, measured on the first foreign world,
+designed-but-owed, and **DENIED**: the full Belavkin
 filter lost to a two-line α-blend on real data (0.3034 vs 0.1349 MAE) and ships OFF; a
 headline speedup re-measured from 3.4× to 1.1× and was corrected. If this README and the
 ledger ever disagree, the ledger wins.
@@ -130,6 +131,17 @@ real actuators, a ~1,450-test release gate, and autonomy earned per-output (most
 mode; Run is competence-gated). One real day of the belief field easing between sparse
 sensor ticks: `docs/figures/belief_field_day.png`. Meerkat remains the flagship
 deployment and the source of the measured evidence.
+
+## Second contact: the first foreign world
+
+In July 2026 the extracted engine met real data it was not built around — a 13-day
+smart-home export from a house nobody on this project had ever instrumented. It booted
+blank, replayed through the production ingest path, held every blank-slate assertion,
+and beat the persistence of its own inputs in every well-sensed room (belief AUC
+0.94/0.87/0.79 vs 0.60–0.67 baselines). The data stays private; the transferable
+lessons — including the **dissipative-role law** (a role fed only one polarity of
+evidence must forget, or it saturates) and the place-provenance fix the run forced —
+are in [docs/FIELD_NOTES.md](docs/FIELD_NOTES.md).
 
 ## What this is not
 
