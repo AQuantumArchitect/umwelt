@@ -24,6 +24,11 @@ BANNED = re.compile(
 # file (relative to src/umwelt) -> words permitted there, for provenance/docstring honesty
 ALLOW: dict[str, set[str]] = {
     "_util.py": {"meerkat"},
+    # schema.py: "zone" is CODE — the NODE_KIND_ALIASES entry {"zone": "region"} and the
+    # BindingSpec.zone field name (kept for signature-compatibility with the origin seam),
+    # plus the comment/docstring lines documenting exactly those. "meerkat" is the
+    # provenance citation in the module docstring.
+    "spec/schema.py": {"zone", "meerkat"},
 }
 
 
