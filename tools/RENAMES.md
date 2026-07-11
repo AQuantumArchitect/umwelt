@@ -99,3 +99,16 @@ reservoir_state.pkl → engine_state.pkl (UMWELT_STATE_PATH).
 | dreaming `from projection.gauge import is_siesta` / `is_siesta(phase)` | `in_rest_window` / `in_rest_window(phase)` (per gauge rename) |
 | forecast_scopes FORECAST_SCOPES (Austin house catalog) | register_scope() over empty FORECAST_SCOPES (retired module; helpers kept for reference) |
 | dream_loop/dreaming should_dream(solar_phase=…) param | KEPT as-is (underscore-joined, not a lint hit; renaming would churn ported tests) |
+
+## P5 proof-gate ports (origin file → umwelt home)
+| meerkat | umwelt |
+|---|---|
+| meerkat/brain/house_sim.py (foreign-house day sim) | proofs/_gridworld.py (gridworld spec + walk + stream; celestial import → driver phase) |
+| tests/brain/test_foreign_blank_slate.py | proofs/blank_slate.py (assertions generalized; learnedness = the fiber-drift witness since the gridworld fiber is qubit-backed) |
+| experiments/ladder_walk.py | proofs/ladder_walk.py (machinery identical; real-cassette loaders stay with the origin — synthetic gridworld stream only; origin verdict quoted, attributed, not re-claimed) |
+| experiments/fidelity_harness.py | proofs/fidelity_harness.py (substrate-only core; measures on the synthetic stream) |
+| experiments/deconfound_ab.py | proofs/deconfound_smoke.py (mechanism smoke: naive vs tagged weights; 10.8×/79% stay with the origin run) |
+| tests/brain/test_graph_state.py | tests/test_graph_state.py (body-organ tests cut with body_state; foreign graph re-voiced as a station) |
+| tests/brain/test_transparency.py | tests/test_transparency.py (merge/sector grouping stays with the origin fold transform; _role_groups pinned to no-fold) |
+| docs/QUANTUM_KALMAN.md | docs/THEORY.md (ladder + η-theorem + the origin ladder verdict, attributed) |
+| docs/PORTFOLIO.md §3 (honest-claims table) | CLAIMS.md (repo root; the ledger wins on disagreement) |

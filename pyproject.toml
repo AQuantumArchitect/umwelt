@@ -29,3 +29,14 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "proofs"]
+# proofs/ files are named for what they prove, not test_*-prefixed — list them explicitly
+python_files = [
+    "test_*.py",
+    "blank_slate.py",
+    "fidelity_harness.py",
+    "ladder_walk.py",
+    "deconfound_smoke.py",
+]
+markers = [
+    "slow: long-running evidence harness (still runs in the default gate)",
+]
