@@ -172,6 +172,11 @@ class DomainSpec:
     channel_maps: dict = field(default_factory=dict)   # named opaque transport maps
     anchors: dict = field(default_factory=dict)        # e.g. {"geo": {"lat":..., "lon":...}};
                                                        # NO default — unanchored means unanchored
+    # The world's natural tick in wall seconds. None (default) = tick-driven: one dt
+    # per ingest regardless of wall gaps — the origin's dense-polled behavior. Set it
+    # and the engine honors the silence between sparse batches as bounded
+    # free-evolution catch-up (see BeliefEngine.ingest wall-clock pacing).
+    tick_s: float | None = None
     # IGNORED signals — ids that arrive on the wire but are DELIBERATELY not bound, each
     # with a reason. Declaring them turns the ingest gap from a scary "N unbound" into the
     # truth: "0 actionable, N explained." Pattern = exact id or `prefix_*` wildcard.

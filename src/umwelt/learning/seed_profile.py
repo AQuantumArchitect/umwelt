@@ -97,9 +97,36 @@ def _neutralize(param) -> None:
         param.prior_mean = mid
 
 
+def _mix_analog_dissipative_beliefs(reservoir) -> list[str]:
+    """Blank's slate for the BELIEF qubits themselves.
+
+    Clusters construct in the pure ground state |0...0> (z=+1). For an event/unitary
+    or observe role that IS the honest floor — |0> means 'off/vacant/unseen', the
+    semantic rest state. But for an ANALOG dissipative role (a temperature, a rate, a
+    drift) the ground pole carries no meaning: 'the reading sits at the cold pole' is
+    a false certainty, not ignorance — the first foreign-cadence world (the market
+    run) measured it as a ~15-tick boot transient every belief had to relax through
+    before evidence won. Blank starts those qubits maximally mixed — genuinely
+    unknown — and leaves every other role's ground start untouched."""
+    from umwelt.spec.roles import is_analog_role, is_driver_role, is_observe_role
+    mixed: list[str] = []
+    field = getattr(reservoir, "field", None)
+    for name, cluster in (getattr(field, "clusters", None) or {}).items():
+        diss = getattr(cluster, "_dissipative_indices", None)
+        if diss is None:
+            diss = getattr(cluster, "_diss", set())
+        for i, role in enumerate(getattr(cluster, "qubit_roles", ())):
+            if (i in diss and is_analog_role(role)
+                    and not is_observe_role(role) and not is_driver_role(role)):
+                cluster.observe_qubit(i, (0.0, 0.0, 0.0), alpha=1.0)
+                mixed.append(f"{name}:{role}")
+    return mixed
+
+
 def apply_seed_profile(reservoir, profile: str = PROFILE_MAGIC) -> dict:
     """Post-build pass over the param fiber. `magic` → NO-OP. `blank` → neutralize every preference+gear
-    param to max-entropy (frozen params skipped; ephemeris classified + reported but left for body-sourcing).
+    param to max-entropy (frozen params skipped; ephemeris classified + reported but left for body-sourcing)
+    and start analog-dissipative belief qubits maximally mixed (_mix_analog_dissipative_beliefs).
     Returns a summary. Call AFTER `_bind_param_fiber` so the params are qubit-backed."""
     summary = {"profile": profile, "neutralized": [], "deferred_ephemeris": [], "counts": {}}
     if profile not in PROFILES:
@@ -133,9 +160,11 @@ def apply_seed_profile(reservoir, profile: str = PROFILE_MAGIC) -> dict:
                 summary["neutralized"].append(f"{node.name}.{key}")
     summary["counts"] = counts
     if profile == PROFILE_BLANK:
+        summary["mixed_beliefs"] = _mix_analog_dissipative_beliefs(reservoir)
         logger.info("seed profile BLANK: neutralized %d preference+gear params (%d ephemeris deferred to "
-                    "body-sourcing); mechanism seeds kept", len(summary["neutralized"]),
-                    len(summary["deferred_ephemeris"]))
+                    "body-sourcing); %d analog-dissipative beliefs mixed; mechanism seeds kept",
+                    len(summary["neutralized"]), len(summary["deferred_ephemeris"]),
+                    len(summary["mixed_beliefs"]))
     return summary
 
 

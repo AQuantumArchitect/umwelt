@@ -341,6 +341,20 @@ class BeliefEngine:
         self._since_full = 0   # ticks since the last full (non-skipped) step — the smooth-clock
                                # cadence counter; drives the dt_scale catch-up. See ingest().
 
+        # Wall-clock pacing — the sparse-cadence lever (spec.tick_s; None = OFF →
+        # tick-driven, the origin behavior: one dt per ingest no matter how much wall
+        # time passed). A world that declares its natural tick gets the SILENCE
+        # between sparse batches honored: the gap free-evolves the field in bounded
+        # unit substeps before the batch's input step (belief eases, nothing is
+        # invented). Measured need: the first foreign-cadence world (daily market
+        # bars) under-drove the field ~15x without this. See ingest().
+        import os as _os
+        self.tick_s: float | None = None
+        self._last_wall_now = None
+        self._last_bridged_inputs: dict | None = None
+        self._wall_catchup_steps = 0        # lifetime counter (the off-means-off pin)
+        self._wall_catchup_max = int(_os.environ.get("UMWELT_WALL_CATCHUP_MAX", "32") or 32)
+
         # field.step timing instrument (UMWELT_TICK_TIMING=1) — EMA + periodic
         # journal log so dtype/batching A/Bs are measurable on a live board
         # without building a second engine (OOM risk). Zero overhead off.
@@ -1005,6 +1019,30 @@ class BeliefEngine:
                          if self.fractal_stack is not None and self.fractal_stack.scales else 0.0)
                 logger.info("STREAM-LEARN: online learn tick #%d (step=%d, surprise=%.4f) — "
                             "the brain learning from the live world", self._stream_count, self._step, _surp)
+
+        # ── WALL-CLOCK PACING (spec.tick_s; None = OFF → tick-driven, byte-identical
+        # to the origin behavior). When a world declares its natural tick, the wall
+        # gap since the last ingest is honored as ZERO-ORDER HOLD: the previous
+        # batch's delivered inputs persist across the gap they close (a close stands
+        # for its session; a reading stands until the next one), advanced in bounded
+        # unit substeps before this batch's input step. A channel absent from the
+        # previous batch contributes nothing during the gap and relaxes — holds span
+        # ONE gap, never invent a longer past. This is the engine-side form of the
+        # republish burst the first foreign-cadence world (daily market bars) needed
+        # harness-side. Orthogonal to the adaptive clock (compute compression on
+        # calm ticks); driver anchoring still happens once per ingest.
+        if (self.tick_s and now is not None and self._last_wall_now is not None
+                and not _skip):
+            _gap = (now - self._last_wall_now).total_seconds() / float(self.tick_s)
+            _catchup = min(int(_gap) - 1, self._wall_catchup_max)
+            _held = self._last_bridged_inputs or {}
+            for _ in range(max(0, _catchup)):
+                self.field.step(_held, dt_scale=1.0)
+                self._wall_catchup_steps += 1
+        if now is not None:
+            self._last_wall_now = now
+        if self.tick_s:
+            self._last_bridged_inputs = dict(inputs) if inputs else None
 
         # Evolve the quantum field (sky never stops).
         # All signals go through the unified pipeline:

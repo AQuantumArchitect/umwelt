@@ -142,6 +142,9 @@ def build_engine(
     from umwelt.clocks.drivers import build_driver
     engine.drivers = [build_driver(d) for d in spec.drivers]
 
+    # Wall-clock pacing — the world's declared natural tick (None = tick-driven).
+    engine.tick_s = getattr(spec, "tick_s", None)
+
     # Output tendrils — the spec's decisions, alive on the uniform surface (blocker 7):
     # each OutputSpec becomes a SpecTendril (committed belief + decoder + gates), and the
     # OutputSurface routes what they emit (shadow/recommend → recorded; auto → dispatch).
