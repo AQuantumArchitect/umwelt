@@ -131,9 +131,13 @@ class Supervisor:
 
 class _Handler(BaseHTTPRequestHandler):
     sup: Supervisor = None
+    api_key: str | None = None      # UMWELTD_API_KEY; None = open (localhost trust)
 
     def log_message(self, fmt, *args):
         pass
+
+    def _authorized(self) -> bool:
+        return self.api_key is None or self.headers.get("X-API-Key") == self.api_key
 
     def _send(self, code: int, payload) -> None:
         body = payload if isinstance(payload, bytes) else json.dumps(payload).encode()
@@ -144,6 +148,9 @@ class _Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def _route(self, method: str) -> None:
+        if not self._authorized():
+            self._send(401, {"error": "missing or wrong X-API-Key"})
+            return
         parts = [p for p in self.path.split("?")[0].split("/") if p]
         n = int(self.headers.get("Content-Length") or 0)
         raw = self.rfile.read(n) if n else None
@@ -182,15 +189,32 @@ class _Handler(BaseHTTPRequestHandler):
 def main() -> None:
     ap = argparse.ArgumentParser(description="umweltd supervisor")
     ap.add_argument("--port", type=int, default=DEFAULT_PORT)
+    ap.add_argument("--host", default="127.0.0.1",
+                    help="bind address; leaving localhost REQUIRES UMWELTD_API_KEY")
     ap.add_argument("--no-respawn", action="store_true",
                     help="do not respawn existing worlds at startup")
     args = ap.parse_args()
+    api_key = os.environ.get("UMWELTD_API_KEY") or None
+    if args.host not in ("127.0.0.1", "localhost") and not api_key:
+        raise SystemExit("refusing to bind beyond localhost without UMWELTD_API_KEY")
     sup = Supervisor()
     if not args.no_respawn:
         sup.respawn_all()
     _Handler.sup = sup
-    server = ThreadingHTTPServer(("127.0.0.1", args.port), _Handler)
-    print(f"[umweltd] supervising {home()} on 127.0.0.1:{args.port}", flush=True)
+    _Handler.api_key = api_key
+    server = ThreadingHTTPServer((args.host, args.port), _Handler)
+    # TLS: point UMWELTD_TLS_CERT/UMWELTD_TLS_KEY at a PEM pair (self-signed is fine
+    # for a single-tenant box; a real deployment terminates at its proxy).
+    cert, key = os.environ.get("UMWELTD_TLS_CERT"), os.environ.get("UMWELTD_TLS_KEY")
+    scheme = "http"
+    if cert and key:
+        import ssl
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ctx.load_cert_chain(cert, key)
+        server.socket = ctx.wrap_socket(server.socket, server_side=True)
+        scheme = "https"
+    print(f"[umweltd] supervising {home()} on {scheme}://{args.host}:{args.port}"
+          f"{' (api-key required)' if api_key else ''}", flush=True)
     try:
         server.serve_forever()
     finally:

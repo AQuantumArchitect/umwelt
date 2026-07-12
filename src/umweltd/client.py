@@ -9,10 +9,18 @@ class UmweltClient:
     """Point at a supervisor (`/worlds/<name>/...` routes) or directly at one worker
     (base_url with world=None and worker-local paths)."""
 
-    def __init__(self, base_url: str, world: str | None = None, timeout: float = 120.0):
+    def __init__(self, base_url: str, world: str | None = None, timeout: float = 120.0,
+                 api_key: str | None = None):
         self.base = base_url.rstrip("/")
         self.world = world
         self.timeout = timeout
+        self.api_key = api_key
+
+    def _headers(self) -> dict:
+        h = {"Content-Type": "application/json"}
+        if self.api_key:
+            h["X-API-Key"] = self.api_key
+        return h
 
     def _url(self, path: str) -> str:
         prefix = f"/worlds/{self.world}" if self.world else ""
@@ -21,7 +29,7 @@ class UmweltClient:
     def _call(self, method: str, path: str, payload: dict | None = None):
         data = json.dumps(payload).encode() if payload is not None else None
         req = urllib.request.Request(self._url(path), data=data, method=method,
-                                     headers={"Content-Type": "application/json"})
+                                     headers=self._headers())
         with urllib.request.urlopen(req, timeout=self.timeout) as resp:
             return json.loads(resp.read() or b"null")
 
@@ -30,7 +38,7 @@ class UmweltClient:
         payload = {"name": name, "spec": spec, "vocabulary": vocabulary, **knobs}
         data = json.dumps(payload).encode()
         req = urllib.request.Request(f"{self.base}/worlds", data=data, method="POST",
-                                     headers={"Content-Type": "application/json"})
+                                     headers=self._headers())
         with urllib.request.urlopen(req, timeout=self.timeout) as resp:
             return json.loads(resp.read())
 

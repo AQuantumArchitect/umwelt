@@ -46,13 +46,23 @@ Worker (behind the proxy):
 
 Client: `umweltd.client.UmweltClient` (stdlib-only).
 
-## Contracts and caveats (Phase S1)
+## Contracts and caveats (Phase S2)
 
 - **Parity is the founding claim**: wire replay hash-equals library replay, and
   kill/respawn recovers the exact state (`tests/test_daemon_parity.py`, pinned).
 - Batch boundaries are per-request: one `POST /events` = one
   `replay_sensor_batches` pass. A live pusher sends one request per flush window.
-- Localhost only, no auth — Phase S2 (single-tenant cloud) adds an API key + TLS.
-- Sparse-cadence worlds under-drive the field (the stream-density lesson from the
-  market run); until the engine addresses it, the pusher owns the republish burst.
-- The context gauge is not yet stamped per-world (live vs replay mode) — Phase S2.
+- **Auth**: set `UMWELTD_API_KEY` and every request needs `X-API-Key`; binding
+  beyond localhost (`--host`) *requires* the key. **TLS**: point
+  `UMWELTD_TLS_CERT`/`UMWELTD_TLS_KEY` at a PEM pair (or terminate at your proxy).
+- **Gauge discipline**: a recovery tail replays under the REPLAY gauge (actuate=0 —
+  old decisions never re-dispatch), then the world stamps LIVE; a manifest
+  `"gauge": "replay"` keeps a pure replay world.
+- **Webhook dispatch**: a manifest `"webhook_url"` POSTs every AUTO (non-shadow)
+  Action as JSON (`tests/test_webhook_dispatch.py`); shadow remains the default and
+  the law, and a dead sink never kills the world.
+- **Sparse cadence is now a spec declaration**: give the world's DomainSpec a
+  `tick_s` and the engine honors ingest gaps as bounded zero-order hold
+  (`tests/test_wall_pacing.py`) — no pusher-side republish burst needed.
+- Still Phase S3+: multi-tenant quotas, vocabulary plugin registry, per-output
+  autonomy billing, engine chaining across worlds.

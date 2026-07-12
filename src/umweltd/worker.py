@@ -52,6 +52,24 @@ def _call_ref(ref: str) -> None:
     fn()
 
 
+def _make_webhook_dispatch(url: str):
+    """The app-owned transport, as a webhook: every AUTO (non-shadow) Action POSTs to
+    `url` as JSON. Shadow stays the law — a spec output dispatches nothing until the
+    domain flips it; this is merely where the flipped ones go. Failures are logged,
+    never fatal (a dead sink must not kill the world)."""
+    import urllib.request
+
+    def _dispatch(action) -> None:
+        try:
+            req = urllib.request.Request(
+                url, data=json.dumps(jsonable(action)).encode(), method="POST",
+                headers={"Content-Type": "application/json"})
+            urllib.request.urlopen(req, timeout=10)
+        except Exception as exc:
+            print(f"[umweltd] webhook dispatch failed: {exc}", flush=True)
+    return _dispatch
+
+
 class WorldHost:
     """Owns the engine + the world dir; every public method is lock-serialized."""
 
@@ -73,15 +91,27 @@ class WorldHost:
             _call_ref(self.manifest["vocabulary"])
 
         from umwelt.boot import build_engine
-        self.engine = build_engine(spec=self.manifest["spec"], population=False)
+        dispatch = (_make_webhook_dispatch(self.manifest["webhook_url"])
+                    if self.manifest.get("webhook_url") else None)
+        self.engine = build_engine(spec=self.manifest["spec"], population=False,
+                                   dispatch=dispatch)
 
         if self.dir.snapshot_path.exists():
             self.engine.load(str(self.dir.snapshot_path))
         self.last_ts = self.dir.cursor()
+        # The gauge discipline (train ≡ deploy): the recovery tail replays under the
+        # REPLAY gauge (actuate=0 — a catch-up must never re-dispatch old decisions),
+        # then the world is stamped LIVE for serving. A manifest "gauge": "replay"
+        # keeps it a pure replay world (offline learners behind the same API).
+        from umwelt.boot import set_role
+        from umwelt.learning.context import ContextState
+        set_role(self.engine, ContextState.replay())
         replayed = self._replay_tail()
         if replayed:
             print(f"[umweltd:{self.name}] replayed {replayed} tail batches "
                   f"after cursor {self.dir.cursor()!r}", flush=True)
+        if self.manifest.get("gauge", "live") != "replay":
+            set_role(self.engine, ContextState.live())
 
     @property
     def name(self) -> str:

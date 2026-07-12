@@ -35,6 +35,7 @@ def test_supervisor_lifecycle(tmp_path):
         "from proofs._gridworld import gridworld_spec\nSPEC = gridworld_spec()\n")
     env = os.environ.copy()
     env["UMWELTD_HOME"] = str(tmp_path / "home")
+    env["UMWELTD_API_KEY"] = "test-key-123"
     env["PYTHONPATH"] = os.pathsep.join(
         [str(tmp_path), str(REPO / "src"), str(REPO), env.get("PYTHONPATH", "")])
     port = 7099
@@ -42,10 +43,19 @@ def test_supervisor_lifecycle(tmp_path):
         [sys.executable, "-m", "umweltd.supervisor", "--port", str(port)], env=env)
     base = f"http://127.0.0.1:{port}"
     try:
-        _wait_http(f"{base}/health")
-        client = UmweltClient(base, world="grid")
+        deadline = time.time() + 30                     # wait for 401 (auth is up)
+        while time.time() < deadline:
+            try:
+                urllib.request.urlopen(f"{base}/health", timeout=2)
+                raise AssertionError("keyless request must be rejected")
+            except urllib.error.HTTPError as e:
+                assert e.code == 401
+                break
+            except Exception:
+                time.sleep(0.1)
+        client = UmweltClient(base, world="grid", api_key="test-key-123")
 
-        created = UmweltClient(base).create_world(
+        created = UmweltClient(base, api_key="test-key-123").create_world(
             "grid", spec="world_spec:SPEC", pin_rngs=True)
         assert created["name"] == "grid" and created["port"] > 0
 
@@ -55,12 +65,13 @@ def test_supervisor_lifecycle(tmp_path):
                 ["2026-01-05T00:01:00+00:00", "resource_cell_0_0", "5.0", None]]
         assert client.ingest(rows)["appended"] == 2
 
-        # stop snapshots + start recovers
+        # stop snapshots + start recovers (keyed requests)
+        key_hdr = {"X-API-Key": "test-key-123"}
         req = urllib.request.Request(f"{base}/worlds/grid/stop", data=b"{}",
-                                     method="POST")
+                                     method="POST", headers=key_hdr)
         assert json.loads(urllib.request.urlopen(req).read())["running"] is False
         req = urllib.request.Request(f"{base}/worlds/grid/start", data=b"{}",
-                                     method="POST")
+                                     method="POST", headers=key_hdr)
         assert json.loads(urllib.request.urlopen(req).read())["running"] is True
         assert client.health()["world"] == "grid"
     finally:
