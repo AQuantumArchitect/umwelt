@@ -29,6 +29,7 @@ origin's and are not re-claimed from this repo's synthetic data.
 | Shadow-first egress: spec outputs decide visibly and dispatch NOTHING until the app opts in; operator overrides move the tendril's learned geometry. | `tests/test_egress_tendrils.py` | PINNED |
 | Save/load preserves the field canon hash byte-for-byte. | `tests/test_engine_blank_boot.py`, `proofs/blank_slate.py` | PINNED |
 | Trust-web off = last-wins with prior-init, so day-1 equals a confidence-weighted average (no silent behavior change when the web is dark). | `tests/test_trust_web.py` | PINNED |
+| **The daemon adds nothing and loses nothing**: a world driven over the wire (umweltd worker: HTTP → event log → production ingest) ends at the exact field canon hash of the same stream replayed library-direct, and a killed worker recovers that hash from snapshot + log tail. | `tests/test_daemon_parity.py` | PINNED |
 
 ## 2. MEASURED ON THE ORIGIN DEPLOYMENT (meerkat — real data, cited, not re-claimed here)
 

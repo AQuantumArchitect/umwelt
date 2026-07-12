@@ -164,6 +164,17 @@ are in [docs/FIELD_NOTES.md](docs/FIELD_NOTES.md).
 | [Sentiment ↔ market](examples/sentiment-market/) | Trust-web fusion; ships its own baselines | Sketch |
 | [Smart home](examples/smarthome/) | The origin — 18 months live | Deployed (meerkat) |
 
+## The engine as a service
+
+`umweltd` (in `src/umweltd/`, [docs/SERVICE.md](docs/SERVICE.md)) runs worlds as a
+local daemon: one worker process per world, an events.db write-ahead log, snapshots,
+and boot = snapshot + log-tail replay through the production ingest path. Its founding
+claim runs in the gate: **the daemon adds nothing and loses nothing** — wire replay
+hash-equals library replay, and a killed worker recovers its exact state
+(`tests/test_daemon_parity.py`). Start it with `python -m umweltd.supervisor`; talk to
+it with `umweltd.client.UmweltClient`. Harness repos stay offline-first; the daemon is
+the live deployment shape.
+
 ## Origin & license
 
 Extracted from meerkat (private) at its flagship-b10.1 release; every curated cut is
