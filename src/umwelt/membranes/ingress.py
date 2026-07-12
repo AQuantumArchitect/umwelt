@@ -559,10 +559,17 @@ class SensorBridge:
                 web = webs[leaf] = self._new_trust_web()
             inputs = {sid: (z, conf, True) for sid, (z, conf) in contribs.items()}
             z_f, conf_f = web.fuse(inputs)
-            # Conservative consensus-grounded online learning: only when ≥2 sources corroborate at high
-            # fused confidence (never train on a lone unverified read).
-            if self._trust_learn and len(inputs) >= 2 and conf_f > 0.6:
-                web.learn(inputs, z_f)
+            # Conservative LEAVE-ONE-OUT online learning. Each source is scored against its
+            # PEERS' consensus, never against a label it contaminated — the consensus-label
+            # form spread a corrupted feed's blame evenly (measured on the first foreign
+            # world's two-feed leaf; see TrustWeb.loo_labels). The corroboration gate is
+            # PER-SOURCE (a label only exists when the peers agree confidently), not the
+            # whole-leaf fused confidence — live disagreement suppresses that exactly when
+            # learning matters most. A lone unverified read still never trains (≥2 live).
+            if self._trust_learn and len(inputs) >= 2:
+                labels = web.loo_labels(inputs)
+                if labels:
+                    web.learn(inputs, labels)
             if conf_f <= 0.0:
                 continue  # fused no-op → leaf free-evolves
             alpha = amax.get(leaf, 1.0) * conf_brake(conf_f)

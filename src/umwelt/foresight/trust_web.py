@@ -82,22 +82,30 @@ class TrustWeb:
         return float(z_fused), float(max(0.0, conf_fused))
 
     # ── learn (delayed-label): ground reliability + compensation on outcomes ──
-    def learn(self, inputs: dict[str, tuple[float, float, bool]], label_z: float,
-              lr: float | None = None) -> None:
+    def learn(self, inputs: dict[str, tuple[float, float, bool]],
+              label_z: "float | dict[str, float]", lr: float | None = None) -> None:
         """Update reliabilities + compensation from a realized leaf value `label_z`
         (a high-confidence direct observation, or the realized future for a forecast
         horizon). Good predictors gain reliability; a source that predicts well
-        SPECIFICALLY when a peer is down grows that peer's compensation term."""
+        SPECIFICALLY when a peer is down grows that peer's compensation term.
+
+        `label_z` may be a PER-SOURCE dict — the leave-one-out form (each source
+        scored against its peers' consensus, never against a label it contaminated;
+        see learn_loo). A live source absent from the dict still counts as live for
+        the down-set but takes no update this round."""
         a = self.lr if lr is None else float(lr)
         live = {s: z for s, (z, conf, lv) in inputs.items() if lv and conf > 0.0}
         for s in live:
             self.seen.add(s)
         down = {s for s in self.seen if s not in live}
+        labels = label_z if isinstance(label_z, dict) else {s: label_z for s in live}
         for s, z in live.items():
+            if s not in labels:
+                continue
             # reward in [0,1]; 1 = perfect. Sharp (1−|err|, not 1−|err|/2) so a source
             # that is consistently ~0.7 off earns LOW trust, not a soft pass — the web
             # has to actually discriminate skill.
-            reward = max(0.0, 1.0 - abs(z - label_z))
+            reward = max(0.0, 1.0 - abs(z - labels[s]))
             r = self._reliability(s)
             self.r[s] = clamp01(r + a * (reward - r))  # EMA toward reward
             # compensation: did s beat its OWN baseline while peer t was down?
@@ -105,6 +113,28 @@ class TrustWeb:
             for t in down:
                 cur = self.c.get((s, t), 0.0)
                 self.c[(s, t)] = clamp01(cur + a * (surplus - cur))
+
+    def loo_labels(self, inputs: dict[str, tuple[float, float, bool]],
+                   min_conf: float = 0.3) -> dict[str, float]:
+        """Leave-one-out labels: each live source's label is its PEERS' fused opinion.
+        The consensus-label failure mode (measured on the first foreign world's
+        two-feed sentiment leaf): a corrupted source drags the consensus toward
+        itself, so every source scores against a contaminated label and blame spreads
+        evenly. Scoring s against fuse(inputs − s) removes s's self-contamination:
+        with ≥3 sources the outlier isolates cleanly; with exactly 2 the situation is
+        genuinely symmetric (no referee exists) and both reliabilities fall together —
+        the honest verdict, surfaced as falling fused confidence."""
+        labels: dict[str, float] = {}
+        for s, (_z, conf, lv) in inputs.items():
+            if not lv or conf <= 0.0:
+                continue
+            others = {t: v for t, v in inputs.items() if t != s}
+            if not others:
+                continue
+            z_o, conf_o = self.fuse(others)
+            if conf_o >= min_conf:
+                labels[s] = z_o
+        return labels
 
     # ── introspection / persistence ──────────────────────────────────────────
     def reliability(self, s: str) -> float:

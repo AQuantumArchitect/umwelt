@@ -78,15 +78,18 @@ class QubitTrustWeb(TrustWeb):
         return math.sqrt(bx * bx + by * by + bz * bz)
 
     # ── learn: partial-collapse the reliability qubit toward the reward ────────
-    def learn(self, inputs: dict[str, tuple[float, float, bool]], label_z: float,
-              lr: float | None = None) -> None:
+    def learn(self, inputs: dict[str, tuple[float, float, bool]],
+              label_z: "float | dict[str, float]", lr: float | None = None) -> None:
         a = self.lr if lr is None else float(lr)
         live = {s: z for s, (z, conf, lv) in inputs.items() if lv and conf > 0.0}
         for s in live:
             self.seen.add(s)
         down = {s for s in self.seen if s not in live}
+        labels = label_z if isinstance(label_z, dict) else {s: label_z for s in live}
         for s, z in live.items():
-            reward = max(0.0, 1.0 - abs(z - label_z))            # sharp reward (== classical) = 1 − surprise
+            if s not in labels:
+                continue
+            reward = max(0.0, 1.0 - abs(z - labels[s]))          # sharp reward (== classical) = 1 − surprise
             r = self._reliability(s)
             # r ← (1−a)r + a·reward via the ONE learner's supervised-target collapse (raw-qubit form,
             # parity-exact with the prior direct observe_qubit; the reward IS 1 − the source's surprise).
