@@ -10,9 +10,19 @@ umwelt is the part quietly holding the live model underneath it.
 **2. As a technical integrator.** If you or your team want umwelt to power something
 of your own, the shape of the work is:
 
-1. **Describe your world.** A short file listing what you're tracking, how it's
-   structured, and what data feeds it — a domain expert can review this file; it
-   isn't code in the traditional sense.
+1. **Describe your world, with technical or AI-assisted help.** The end result is a
+   short structured file listing what you're tracking, how it's related, and what
+   data feeds it. **This step is not yet self-service.** Authoring that file today
+   follows a documented schema and a set of hard-won domain-modeling idioms
+   ([docs/SPEC.md](../SPEC.md)) — it is closer to writing a small, declarative
+   configuration than a paragraph of prose. In this project's own practice, the
+   actual workflow has been: a domain expert describes what they want in
+   conversation, and an AI coding assistant (the same kind of tool this document was
+   written with) turns that description into the structured file, then validates it
+   against an automated proof that checks every declared input actually drives the
+   model before anyone trusts it. A domain expert can review, correct, and extend
+   that file once it exists — writing the first one from scratch still takes someone
+   who knows the schema, human or AI.
 2. **Point umwelt at it.** Either as a library inside your own application, or as a
    small standalone service (`umweltd`) your application talks to over a plain HTTP
    API — post readings in, read back live beliefs, forecasts, and recommendations.
@@ -20,8 +30,9 @@ of your own, the shape of the work is:
    anything; promote individual decisions to "live" once you trust them.
 
 There's also a small command-line tool (`umweltctl`) for the basic operational
-loop — create a world, check its health, push data, read results — without writing
-any integration code at all, useful for a first hands-on evaluation.
+loop — create a world, check its health, push data, read results — once the
+structured description above exists, useful for a first hands-on evaluation without
+writing any application-integration code.
 
 ## What running it looks like, concretely
 
@@ -60,6 +71,15 @@ Being upfront, in the same spirit as the evidence ledger:
 
 - *"Does this actually work, or is it a nice idea?"* → [CLAIMS.md](../../CLAIMS.md) —
   every claim tiered by evidence, including the ones that were tried and failed.
+- *"Can I just describe my domain in plain English and get a working model?"* →
+  **Not automatically, not yet.** umwelt has no natural-language-to-spec compiler —
+  today, going from "a domain I want modeled" to a working structured file is
+  authoring work, done by a person who knows the schema or, in this project's actual
+  practice, an AI coding assistant working from a domain expert's description in
+  conversation. That combination has proven fast (this project's own new domains have
+  gone from a conversation to a validated, tested spec inside a single working
+  session) — it just isn't a zero-touch pipeline yet. Building one is a plausible
+  future capability, not a claim made about the present.
 - *"What exactly would I need to describe to model my domain?"* →
   [docs/SPEC.md](../SPEC.md).
 - *"What does a finished example look like?"* →

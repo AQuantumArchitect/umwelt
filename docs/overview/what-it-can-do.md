@@ -5,19 +5,31 @@ Concrete capabilities, explained without the internals. For the technical pictur
 [CLAIMS.md](../../CLAIMS.md) (the evidence behind every claim below, tiered by how
 proven it is).
 
-## 1. Build understanding from a short description, not a training pipeline
+## 1. Build understanding from a structured description, not a training pipeline
 
-You describe a world as a small structured file: the things you care about (a room, a
-stock ticker, a device), how they relate (a room belongs to a house; a ticker belongs
-to a sector), and what data feeds them (a motion sensor, a price feed, a news
-sentiment score). umwelt turns that description into a live model — no labeled
-dataset, no training run, no MLOps pipeline required to get started.
+A world is a small structured file: the things you care about (a room, a stock
+ticker, a device), how they relate (a room belongs to a house; a ticker belongs to a
+sector), and what data feeds them (a motion sensor, a price feed, a news sentiment
+score). umwelt turns that description into a live model — no labeled dataset, no
+training run, no MLOps pipeline required to get started.
 
-*Example:* to model "is anyone in the den, and is it warm enough," you'd declare a
-`den` with two things to track — occupancy and warmth — point a motion sensor and a
-thermostat reading at it, and umwelt starts holding a live, uncertainty-aware belief
-about both, easing gracefully between readings instead of freezing on the last number
-it happened to see.
+*Example:* to model "is anyone in the den, and is it warm enough," someone would
+declare a `den` with two things to track — occupancy and warmth — point a motion
+sensor and a thermostat reading at it, and umwelt starts holding a live,
+uncertainty-aware belief about both, easing gracefully between readings instead of
+freezing on the last number it happened to see.
+
+**Worth being precise about:** that structured file is not free-form English today.
+Someone still has to author it — a technical team member, or an AI coding assistant
+working from a domain expert's description — following a documented checklist
+([docs/SPEC.md](../SPEC.md)) and a working template
+([examples/gridworld/](../../examples/gridworld)). In this project's own practice so
+far, that has meant a domain expert describing what they want in conversation and an
+AI coding agent turning it into the structured file, then checking it against an
+automated proof that it's wired correctly. There is no "paste in a paragraph and get
+a model back" compiler yet — that would be a natural next capability, not something
+that exists today. See [how you'd work with it](working-with-it.md) for the actual,
+demonstrated workflow.
 
 ## 2. Fuse multiple, disagreeing sources — and learn which ones to trust
 

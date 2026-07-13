@@ -12,21 +12,28 @@ fleet of devices, a customer relationship — does one of two things badly: it h
 rules that break the moment the real world doesn't match them, or it bolts on a
 statistical model that can't tell you when it's guessing.
 
-umwelt is a general-purpose engine for the middle ground. You describe the shape of a
-world you care about — a short, structured description, not a program — and it builds
-and continuously maintains a live, honest model of it. It ingests messy, partial,
-sometimes-conflicting data; it always knows, and can tell you, how confident it is in
-any given belief; and it can recommend or take action without ever mistaking "I
-decided X" for "the world told me X."
+umwelt is a general-purpose engine for the middle ground. A world you care about gets
+described once, as a short structured file — not a traditional program, but not
+free-form English either — and from that point on umwelt builds and continuously
+maintains a live, honest model of it. It ingests messy, partial, sometimes-conflicting
+data; it always knows, and can tell you, how confident it is in any given belief; and
+it can recommend or take action without ever mistaking "I decided X" for "the world
+told me X."
+
+Writing that first description is real technical work today, not a plain-English
+input box — see [how you'd work with it](working-with-it.md) for exactly who does
+that, and how.
 
 It is not a chatbot, not a general-purpose AI, and not a drop-in dashboard. It's
 closer to an always-on nervous system for one specific domain: plug it into a house, a
 portfolio, a fleet, a workflow, and it holds a running, uncertainty-aware picture of
 that one thing, all the time.
 
-**In one sentence:** umwelt turns a short description of "the things I care about and
-how they relate" into a live, self-honest model that keeps itself current and always
-knows the difference between what it has actually observed and what it merely assumes.
+**In one sentence:** umwelt turns a structured description of "the things I care about
+and how they relate" — authored today with technical or AI-assisted help, not typed
+as a paragraph of English — into a live, self-honest model that keeps itself current
+and always knows the difference between what it has actually observed and what it
+merely assumes.
 
 ## Where it comes from
 
