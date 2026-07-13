@@ -3,6 +3,10 @@
 **A belief-field engine.** Describe a world as data; feed it observations; it holds a
 live, honest, uncertain comprehension of that world — and forecasts from it.
 
+*Evaluating this as a non-engineer — a potential customer, partner, or investor?
+Start at [docs/overview/](docs/overview/) instead — a plain-terms explainer, no
+engineering background required.*
+
 ## Install
 
 ```bash
