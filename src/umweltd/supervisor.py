@@ -205,14 +205,56 @@ class _Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _send_html(self, code: int, page: str) -> None:
+        self._last_status = code
+        body = page.encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _static(self, method: str, parts: list) -> bool:
+        """The unauthenticated static surface: the playground page and the rendered
+        docs. Static content only — it holds no world data (the page's own API calls
+        carry the visitor's X-API-Key); every JSON route stays behind auth. Gate the
+        whole surface off with UMWELTD_UI=off."""
+        if method != "GET" or os.environ.get("UMWELTD_UI", "on").lower() in (
+                "off", "0", "false"):
+            return False
+        from umweltd import docsite, playground
+        if parts == []:                                  # / → the playground
+            self._last_status = 302
+            self.send_response(302)
+            self.send_header("Location", "/ui")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return True
+        if parts == ["ui"]:
+            self._send_html(200, playground.PLAYGROUND_HTML)
+            return True
+        if parts == ["docs"]:
+            self._send_html(200, docsite.render_index())
+            return True
+        if len(parts) == 2 and parts[0] == "docs":
+            page = docsite.render_doc(parts[1])
+            if page is None:
+                self._send(404, {"error": f"no doc {parts[1]!r}"})
+            else:
+                self._send_html(200, page)
+            return True
+        return False
+
     def _route(self, method: str) -> None:
         t0 = time.time()
         self._last_status = None
         try:
+            parts = [p for p in self.path.split("?")[0].split("/") if p]
+            if self._static(method, parts):
+                return
             if not self._authorized():
                 self._send(401, {"error": "missing or wrong X-API-Key"})
                 return
-            parts = [p for p in self.path.split("?")[0].split("/") if p]
             n = int(self.headers.get("Content-Length") or 0)
             raw = self.rfile.read(n) if n else None
             if parts == ["health"]:

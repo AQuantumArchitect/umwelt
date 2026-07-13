@@ -6,6 +6,51 @@ if the two ever disagree, CLAIMS.md wins.
 
 ## [Unreleased]
 
+### Engine
+- `umwelt.spec.validate` — the deterministic spec gate, one reusable command
+  (`python -m umwelt.spec.validate module:ATTR`): topology, strict binding
+  registration (surfacing exactly what the boot path's membrane guard swallows),
+  blank boot, a synthetic exercise proving every binding drives the field (driver-
+  role bindings exempt — the ingest path routes them out of band), and a save/load
+  round-trip. The shadow law is enforced (`shadow=False` fails unless waived).
+
+### umweltd
+- `spec_path` manifest knob: worlds whose spec module lives outside the installed
+  packages (a forge workspace) boot and event-source-recover through the manifest
+  alone; the worker prepends it to `sys.path` before the spec ref imports.
+- **The playground** (`/ui`): a self-contained browser dashboard served by the
+  supervisor — live per-role belief bars, a push-readings panel over the new
+  `GET /worlds/<n>/bindings` endpoint, the shadow-decision feed, raw state. Loads
+  without auth (static, no world data); its API calls carry the visitor's key.
+- **The docs site** (`/docs`): project docs rendered server-side from the checkout
+  (plain-terms overview first); `python -m umweltd.docsite --export DIR` writes the
+  same pages as a standalone static site. `UMWELTD_UI=off` disables both surfaces.
+- `umweltctl bindings --world <w>` and `UmweltClient.bindings()`; `umweltctl
+  create --spec-path` exposes the manifest knob from the operator CLI.
+- SERVICE.md gained a "Sharing on your LAN" recipe (API key, WSL2 port-forward
+  note, trust model).
+
+### umweltforge — the embedded compiler + warden (EXPERIMENTAL)
+- `umwelt-forge new <name> --rant "..."`: an embedded coding agent (Claude Agent
+  SDK, optional `forge` extra) authors the `DomainSpec` module in a scoped
+  workspace; the pipeline independently re-runs the deterministic gate in a fresh
+  subprocess and registers the world only on green — a lying agent provably cannot
+  register a broken world (test-pinned, offline, no API key in the repo gate).
+- `umwelt-forge warden tick <name>`: cron-able one-shot inspection of a running
+  world under **earned autonomy** — per-world, per-change-type dials, everything
+  defaulting to propose-only; `topology_change` can never auto-apply; the warden
+  cannot promote itself (policy hash-checked around the session); every proposal,
+  apply, and failure lands on an append-only competence ledger.
+- Authoring quality on real rants is unmeasured — evaluation owed (see CLAIMS.md).
+
+### Examples
+- `examples/mirror/` — the daemon's self-portrait: a world whose five sensors
+  are umweltd's own `/health` telemetry (including the byte-size of its own
+  event log, which grows because of the readings that measure it), fed back in
+  through `POST /events`. The first sitting witnessed a sibling world's
+  operator-initiated outage as a single `gh_alive = 0` reading and recovered;
+  it doubles as an end-to-end exercise of the whole service API.
+
 ## [0.1.0] - 2026-07-12
 
 First tagged release.

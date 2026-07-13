@@ -10,19 +10,24 @@ umwelt is the part quietly holding the live model underneath it.
 **2. As a technical integrator.** If you or your team want umwelt to power something
 of your own, the shape of the work is:
 
-1. **Describe your world, with technical or AI-assisted help.** The end result is a
-   short structured file listing what you're tracking, how it's related, and what
-   data feeds it. **This step is not yet self-service.** Authoring that file today
-   follows a documented schema and a set of hard-won domain-modeling idioms
-   ([docs/SPEC.md](../SPEC.md)) — it is closer to writing a small, declarative
-   configuration than a paragraph of prose. In this project's own practice, the
-   actual workflow has been: a domain expert describes what they want in
-   conversation, and an AI coding assistant (the same kind of tool this document was
-   written with) turns that description into the structured file, then validates it
-   against an automated proof that checks every declared input actually drives the
-   model before anyone trusts it. A domain expert can review, correct, and extend
-   that file once it exists — writing the first one from scratch still takes someone
-   who knows the schema, human or AI.
+1. **Describe your world.** The end result is a short structured file listing what
+   you're tracking, how it's related, and what data feeds it — closer to a small,
+   declarative configuration than a paragraph of prose, following a documented
+   schema and hard-won domain-modeling idioms ([docs/SPEC.md](../SPEC.md)). Two ways
+   to get there today:
+   - **The embedded compiler (experimental).** `umwelt-forge`
+     ([docs/FORGE.md](../FORGE.md)) takes a plain-English description, has an
+     embedded AI coding agent author the structured file, and — the important part —
+     runs a deterministic, automated gate that checks every declared input actually
+     drives the model before the world is allowed to exist. The agent's own claim of
+     success is never trusted; only a passing gate registers a world. It's a
+     command-line tool needing an AI-provider API key, and its authoring quality on
+     real descriptions is not yet measured (that evaluation is owed in the ledger).
+   - **The demonstrated manual workflow.** A domain expert describes what they want
+     in conversation and an AI coding assistant (or a person who knows the schema)
+     writes the file, validated by the same automated gate. This is how this
+     project's own domains were built, and it remains the recommended path for
+     anything you'd put in production.
 2. **Point umwelt at it.** Either as a library inside your own application, or as a
    small standalone service (`umweltd`) your application talks to over a plain HTTP
    API — post readings in, read back live beliefs, forecasts, and recommendations.
@@ -72,14 +77,17 @@ Being upfront, in the same spirit as the evidence ledger:
 - *"Does this actually work, or is it a nice idea?"* → [CLAIMS.md](../../CLAIMS.md) —
   every claim tiered by evidence, including the ones that were tried and failed.
 - *"Can I just describe my domain in plain English and get a working model?"* →
-  **Not automatically, not yet.** umwelt has no natural-language-to-spec compiler —
-  today, going from "a domain I want modeled" to a working structured file is
-  authoring work, done by a person who knows the schema or, in this project's actual
-  practice, an AI coding assistant working from a domain expert's description in
-  conversation. That combination has proven fast (this project's own new domains have
-  gone from a conversation to a validated, tested spec inside a single working
-  session) — it just isn't a zero-touch pipeline yet. Building one is a plausible
-  future capability, not a claim made about the present.
+  **Yes, experimentally — with honest caveats.** `umwelt-forge`
+  ([docs/FORGE.md](../FORGE.md)) is exactly that pipeline: describe the domain, an
+  embedded AI coding agent authors the structured file, an automated deterministic
+  gate verifies it's wired correctly, and only a passing gate lets the world run.
+  The safety discipline is machine-checked on every code change (a wrong — or even
+  dishonest — authoring attempt provably cannot register a broken world). The
+  caveats: it's a command-line tool for technical users, it needs an AI-provider
+  API key, and how *often* it authors a correct world from a real description is
+  not yet measured — that evaluation is owed in the ledger before this is claimed
+  as more than an experimental capability. For production work, the demonstrated
+  AI-assisted manual workflow above remains the recommended path.
 - *"What exactly would I need to describe to model my domain?"* →
   [docs/SPEC.md](../SPEC.md).
 - *"What does a finished example look like?"* →

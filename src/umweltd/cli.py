@@ -45,6 +45,7 @@ def cmd_create(args) -> None:
         **({"webhook_url": args.webhook_url} if args.webhook_url else {}),
         **({"gauge": args.gauge} if args.gauge else {}),
         **({"pin_rngs": True} if args.pin_rngs else {}),
+        **({"spec_path": args.spec_path} if args.spec_path else {}),
     ))
 
 
@@ -70,6 +71,10 @@ def cmd_belief(args) -> None:
 
 def cmd_recommendations(args) -> None:
     _print(_client(args).recommendations())
+
+
+def cmd_bindings(args) -> None:
+    _print(_client(args).bindings())
 
 
 def cmd_snapshot(args) -> None:
@@ -98,6 +103,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--webhook-url", default=None)
     p.add_argument("--gauge", default=None, choices=["live", "replay"])
     p.add_argument("--pin-rngs", action="store_true")
+    p.add_argument("--spec-path", action="append", default=None,
+                   help="dir prepended to sys.path before the spec ref imports "
+                        "(repeatable; how off-package worlds boot — see SERVICE.md)")
     p.set_defaults(func=cmd_create)
 
     for name, fn, help_ in [
@@ -106,6 +114,7 @@ def build_parser() -> argparse.ArgumentParser:
         ("health", cmd_health, "world health"),
         ("state", cmd_state, "the canonical graph_state projection"),
         ("recommendations", cmd_recommendations, "the shadow decision layer"),
+        ("bindings", cmd_bindings, "the world's declared signal vocabulary"),
         ("snapshot", cmd_snapshot, "save engine + cursor"),
     ]:
         p = sub.add_parser(name, help=help_)

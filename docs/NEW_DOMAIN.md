@@ -47,15 +47,27 @@ the word into your own package, not to widen the allow-list lightly).
 
 ## 3. Boot blank and check the ingest gap
 
+Before anything else, run the one-command spec gate — it packages every check below
+(topology, strict binding registration, blank boot, "every binding drove the field",
+save/load round-trip) and exits nonzero with the exact failure named:
+
+```bash
+python -m umwelt.spec.validate your_module:SPEC        # add --json for tooling
+```
+
+Then boot it yourself:
+
 ```python
 from umwelt.boot import build_engine
 engine = build_engine(spec=MY_SPEC)
 result = engine.ingest(sensor_readings={...}, now=t)
 ```
 
-A binding whose `zone` or `role` doesn't exist in your spec now raises loudly at
-registration (it used to fail silently) — check your logs for `"spec binding %s
-skipped"` on first boot; that message names the exact bad binding.
+A binding whose `zone` or `role` doesn't exist in your spec raises loudly at direct
+registration, but the boot path is membrane-guarded — a bad binding is *skipped with a
+warning* so it can't break the others. That's why the gate above exists: it re-runs
+every binding strictly and fails on what boot would only log (`"spec binding %s
+skipped"` names the exact bad binding in a running world's logs).
 
 ## 4. Prove it
 

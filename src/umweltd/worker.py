@@ -19,13 +19,19 @@ Endpoints (JSON in/out):
     GET  /beliefs?node=&role=   one belief read (raw bloch; domains apply their own
                             read convention client-side)
     GET  /recommendations   the shadow layer — decisions that would have dispatched
+    GET  /bindings          the declared signal vocabulary (what a client may ingest)
     POST /snapshot          save engine + cursor; returns {"field_canon_hash": ...}
 
 SIGTERM snapshots before exit. Every engine touch is serialized by one lock.
 
 world.json knobs: {"name", "spec": "module:ATTR", "vocabulary": "module:function"?,
-"flush_secs": 30.0?, "pin_rngs": false?} — pin_rngs seeds the process RNGs at boot
-(the parity proof's determinism switch; live worlds leave it off).
+"flush_secs": 30.0?, "pin_rngs": false?, "spec_path": "/abs/dir" | [dirs]?} —
+pin_rngs seeds the process RNGs at boot (the parity proof's determinism switch; live
+worlds leave it off). spec_path dirs are prepended to sys.path before the spec ref
+imports, so a world authored OUTSIDE the installed packages (a forge workspace)
+boots and event-source-recovers identically. Trust model: spec_path is arbitrary
+code execution by design — exactly the trust already granted to the spec ref itself
+(both import a module into this process).
 """
 from __future__ import annotations
 
@@ -83,6 +89,16 @@ class WorldHost:
         self.lock = threading.Lock()
         self.last_ts: str = ""
         self.flush_secs = float(self.manifest.get("flush_secs", FLUSH_SECS_DEFAULT))
+
+        # spec_path first: the manifest is the event-sourced world identity, so a
+        # generated spec module's home rides in world.json and survives every respawn
+        # (watchdog, /start, supervisor restart) with no environment to reconstruct.
+        import sys
+        raw = self.manifest.get("spec_path")
+        for p in ([raw] if isinstance(raw, str) else (raw or [])):
+            resolved = str(Path(p).expanduser().resolve())
+            if resolved not in sys.path:
+                sys.path.insert(0, resolved)
 
         if self.manifest.get("pin_rngs"):
             import random
@@ -184,6 +200,12 @@ class WorldHost:
         recs = getattr(surface, "recommendations", None) or ()
         return jsonable(list(recs))
 
+    def bindings(self) -> list:
+        """The world's declared signal vocabulary — what a client may ingest.
+        Drives the playground's push-readings panel."""
+        with self.lock:
+            return jsonable(self.engine.sensor_bridge.list_bindings())
+
     def health(self) -> dict:
         def _size(p: Path) -> int:
             return p.stat().st_size if p.exists() else 0
@@ -241,6 +263,8 @@ class _Handler(BaseHTTPRequestHandler):
                 self._send(200, self.host.state())
             elif url.path == "/recommendations":
                 self._send(200, self.host.recommendations())
+            elif url.path == "/bindings":
+                self._send(200, self.host.bindings())
             elif url.path == "/beliefs":
                 q = parse_qs(url.query)
                 self._send(200, self.host.belief(q["node"][0], q["role"][0]))

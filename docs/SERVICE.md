@@ -50,6 +50,51 @@ HTTP — `umweltctl worlds`, `create`, `stop`, `start`, `health`, `state`, `beli
 `recommendations`, `snapshot`, `ingest --file batch.json`. Reads `UMWELTD_URL` /
 `UMWELTD_API_KEY` from the environment so it needs no flags in the common case.
 
+## The playground and the docs site
+
+The supervisor serves a browser surface next to the JSON API (no build step, no
+external assets — works on an air-gapped LAN):
+
+- **`/ui`** — the playground: pick a world, watch per-node/per-role beliefs ease in
+  near-real-time (auto-refreshing bars over `/state`'s bloch clusters), push
+  readings at declared bindings (`GET /worlds/<n>/bindings`, new), and read the
+  shadow decisions. The page loads without auth (it holds no world data); every
+  API call it makes carries the `X-API-Key` the visitor enters, kept in their
+  browser's localStorage.
+- **`/docs`** — the project docs rendered as HTML (the plain-terms overview first),
+  read from the repo checkout (or `UMWELT_DOCS_DIR`). A package-only deployment
+  without a checkout serves a clear "docs not bundled" page.
+- **`/`** redirects to `/ui`. Set `UMWELTD_UI=off` to kill the whole static
+  surface (JSON API untouched).
+- **Export the docs** as a standalone static site you can zip and send:
+  `python -m umweltd.docsite --export ./umwelt-docs`.
+
+## Sharing on your LAN (a friend tries it)
+
+```bash
+export UMWELTD_API_KEY=pick-something-long
+umweltd --host 0.0.0.0 --port 7071        # refuses to start keyless off-localhost
+hostname -I                                # your LAN address
+```
+
+Your friend opens `http://<your-lan-ip>:7071/ui`, enters the API key, and plays —
+same URL + `X-API-Key` header for raw API/scripting use
+(`UmweltClient("http://<ip>:7071", world="...", api_key="...")`).
+
+Notes:
+- **WSL2**: `hostname -I` gives the WSL NAT address, unreachable from the LAN.
+  Either enable mirrored networking (`.wslconfig`: `networkingMode=mirrored`,
+  Windows 11 22H2+) or forward the port from Windows (admin PowerShell):
+  `netsh interface portproxy add v4tov4 listenport=7071 listenaddress=0.0.0.0
+  connectport=7071 connectaddress=<wsl-ip>` — plus a Windows Firewall inbound
+  allow for 7071.
+- The API key is the ONLY gate: anyone holding it can create/stop worlds and
+  ingest. Share it like a password, rotate it by restarting with a new value, and
+  put TLS (`UMWELTD_TLS_CERT`/`UMWELTD_TLS_KEY` or your own proxy) in front of
+  anything beyond a trusted LAN.
+- `/ui` and `/docs` are deliberately readable without the key (static product
+  surface, no world data); `UMWELTD_UI=off` if even that is too open.
+
 ## Running it in a container
 
 ```bash
@@ -82,6 +127,12 @@ lives on the `/data` volume (`UMWELTD_HOME`).
 - **Sparse cadence is now a spec declaration**: give the world's DomainSpec a
   `ingest_hold_s` and the engine honors ingest gaps as bounded zero-order hold
   (`tests/test_wall_pacing.py`) — no pusher-side republish burst needed.
+- **`spec_path`**: a manifest key (`"spec_path": "/abs/dir"` or a list) the worker
+  prepends to `sys.path` before the spec ref imports — how a world authored outside
+  the installed packages (an `umwelt-forge` workspace, docs/FORGE.md) boots and
+  event-source-recovers identically (`tests/test_forge_spec_path.py`). Trust model:
+  spec_path is arbitrary code execution *by design* — exactly the trust already
+  granted to the `spec` ref itself; both import a module into the worker process.
 - **Crashed workers self-heal**: the supervisor tracks which worlds are `desired`
   (added by `create`/`start`, removed by `stop` — so an operator-requested stop is
   never mistaken for a crash) and a background watchdog

@@ -76,5 +76,8 @@ class UmweltClient:
     def recommendations(self) -> list:
         return self._call("GET", "recommendations")
 
+    def bindings(self) -> list:
+        return self._call("GET", "bindings")
+
     def snapshot(self) -> dict:
         return self._call("POST", "snapshot", {})

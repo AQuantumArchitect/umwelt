@@ -19,17 +19,20 @@ sensor and a thermostat reading at it, and umwelt starts holding a live,
 uncertainty-aware belief about both, easing gracefully between readings instead of
 freezing on the last number it happened to see.
 
-**Worth being precise about:** that structured file is not free-form English today.
-Someone still has to author it — a technical team member, or an AI coding assistant
-working from a domain expert's description — following a documented checklist
+**Worth being precise about:** that structured file is not free-form English. Someone
+— or something — still authors it, following a documented checklist
 ([docs/SPEC.md](../SPEC.md)) and a working template
-([examples/gridworld/](../../examples/gridworld)). In this project's own practice so
-far, that has meant a domain expert describing what they want in conversation and an
-AI coding agent turning it into the structured file, then checking it against an
-automated proof that it's wired correctly. There is no "paste in a paragraph and get
-a model back" compiler yet — that would be a natural next capability, not something
-that exists today. See [how you'd work with it](working-with-it.md) for the actual,
-demonstrated workflow.
+([examples/gridworld/](../../examples/gridworld)). What's new: an **experimental v1
+of exactly that "paste in a description" pipeline now exists** (`umwelt-forge`,
+[docs/FORGE.md](../FORGE.md)) — an embedded AI coding agent turns a plain-English
+description into the structured file, and a deterministic, automated gate decides
+whether the result is actually wired correctly before anything runs. Honest caveats:
+it's a command-line tool for technical users today, it needs an AI-provider API key,
+and while the *safety discipline* is machine-checked on every code change (a wrong or
+even dishonest authoring attempt provably cannot register a broken world), the
+*authoring quality* on real-world descriptions is not yet measured — that evaluation
+is explicitly owed in the claims ledger. See
+[how you'd work with it](working-with-it.md) for both workflows.
 
 ## 2. Fuse multiple, disagreeing sources — and learn which ones to trust
 

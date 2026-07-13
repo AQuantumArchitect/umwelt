@@ -37,6 +37,10 @@ ALLOW: dict[str, set[str]] = {
     # keep the origin seam's kwarg name so BindingSpec.zone and ported callers register
     # unchanged (apply_spec_bindings passes zone=b.zone).
     "membranes/ingress.py": {"zone"},
+    # validate.py: "zone" is CODE — the strict gate reads BindingSpec.zone and calls
+    # SensorBridge.register(zone=…) with no membrane guard (same origin-seam rationale
+    # as ingress.py).
+    "spec/validate.py": {"zone"},
 }
 
 

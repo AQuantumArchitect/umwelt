@@ -178,6 +178,7 @@ are in [docs/FIELD_NOTES.md](docs/FIELD_NOTES.md).
 | [Butler](examples/butler/) | LLM parses at their honest η; non-training as privacy | Sketch |
 | [Sentiment ↔ market](examples/sentiment-market/) | Trust-web fusion; ships its own baselines | Sketch |
 | [Smart home](examples/smarthome/) | The origin — 18 months live | Deployed (meerkat) |
+| [Mirror](examples/mirror/) | umweltd observing itself through its own API | Live demo (first sitting logged) |
 
 ## The engine as a service
 
@@ -189,6 +190,23 @@ hash-equals library replay, and a killed worker recovers its exact state
 (`tests/test_daemon_parity.py`). Start it with `umweltd` (or `docker compose up`); talk
 to it with `umweltd.client.UmweltClient` or the `umweltctl` CLI. Harness repos stay
 offline-first; the daemon is the live deployment shape.
+
+It also serves a browser **playground** at `/ui` (live belief bars, push readings,
+shadow decisions — one self-contained page, no build step) and the rendered docs at
+`/docs`; share both on your LAN with an API key in one command
+([docs/SERVICE.md](docs/SERVICE.md) → "Sharing on your LAN").
+
+## The forge — rant → running world (experimental)
+
+`umwelt-forge` ([docs/FORGE.md](docs/FORGE.md), `pip install "umwelt-engine[forge]"`)
+embeds a coding agent that authors a `DomainSpec` from a plain-English description,
+then registers it as a running world **only** if the deterministic spec gate
+(`python -m umwelt.spec.validate`) passes in an independent subprocess — a lying
+agent provably cannot register a broken world (test-pinned, offline). A cron-able
+`warden tick` inspects running worlds under earned autonomy: every change-type starts
+propose-only, promotion is human-only, topology changes can never auto-apply.
+Pipeline discipline is pinned in the gate; authoring quality on real rants is
+evaluation-owed ([CLAIMS.md](CLAIMS.md)).
 
 ## Origin & license
 
