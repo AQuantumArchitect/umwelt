@@ -1,0 +1,14 @@
+services:
+  umweltd:
+    build: .
+    ports:
+      - "7071:7071"
+    environment:
+      # Required: binding 0.0.0.0 (the container's default CMD) refuses to start
+      # without one — set your own in a .env file or the shell environment.
+      UMWELTD_API_KEY: ${UMWELTD_API_KEY:?set UMWELTD_API_KEY before starting}
+    volumes:
+      - umweltd-data:/data
+
+volumes:
+  umweltd-data:

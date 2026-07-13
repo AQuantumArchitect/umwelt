@@ -14,10 +14,15 @@ declares its `roles` (the qubit axes it holds beliefs on), a `kind`
 (`root | region | environment | clock | anchor | signal | actuator | entity | component | synthetic`
 — domain dialects like `zone`/`sensor`/`person` are accepted as aliases), optional
 `role_modes` (`{role: "unitary" | "dissipative"}` — event-kicked vs continuously-driven;
-unregistered roles default to dissipative, the safe choice), optional `params`
-(`{name: (default, sigma, lo, hi)}` — this node's learnable priors), and optional
-`reduce` (`"max" | "mean" | "or"` — a derived belief synthesized from the children's
-shared role).
+unregistered roles default to dissipative, the safe choice). **Read
+[docs/FIELD_NOTES.md §1](FIELD_NOTES.md) before picking this** — a role fed only one
+polarity of evidence (most sensor-derived roles) saturates permanently if left
+`"unitary"`; that is the dissipative-role law, found the hard way on real data.
+Optional `params` (`{name: (default, sigma, lo, hi)}` — this node's learnable priors;
+the meaningful keys are `gamma_diss` / `gamma_diss_{role}`, the dissipative relaxation
+rate — a bare `"gamma"` key is inert and does nothing, see `NodeSpec.params` in
+`schema.py`), and optional `reduce` (`"max" | "mean" | "or"` — a derived belief
+synthesized from the children's shared role).
 
 ### 2. Bridges — the lateral structure
 `BridgeSpec(source, target, shared_roles, kind)` — `open | gated | wall` set the coupling
@@ -64,6 +69,16 @@ result = engine.ingest(sensor_readings={...}, now=t)
 The engine boots BLANK — max-entropy beliefs, unlocated, nothing assumed
 (`engine.seed_profile == "blank"`). Anchors (`spec.anchors`) are grounded explicitly by
 the app via `engine.ground_anchor(name, value, codec=...)` — unanchored means unanchored.
+
+If your feed arrives sparsely (daily bars, not a dense sensor poll), declare
+`DomainSpec.ingest_hold_s` — see [docs/TIME.md](TIME.md) for why this is cadence
+plumbing, not a time model, and why the domain's own clock (if it has one) belongs in
+a `DriverSpec` instead.
+
+Vocabulary you register (role modes, normalizers, decoders, drivers) lives in YOUR
+package, imported at boot — `src/umwelt/` itself is checked by
+`tests/test_vocabulary_lint.py` to contain zero domain words, so nothing you add there
+will ever land upstream by accident.
 
 ## Proving it
 

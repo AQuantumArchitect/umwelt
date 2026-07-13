@@ -31,7 +31,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from proofs._gridworld import agent_walk, binned_truth, grid_cells
+from examples.gridworld.world import agent_walk, binned_truth, grid_cells
 from umwelt.learning.learning_router import LearningRouter
 from umwelt.learning.regressor import OnlineRegressor
 

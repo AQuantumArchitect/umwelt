@@ -1,12 +1,15 @@
-"""_gridworld — a self-contained gridworld domain + a deterministic synthetic day.
+"""examples/gridworld/world — a self-contained gridworld domain + a deterministic
+synthetic day.
 
-The proof gate (proofs/blank_slate.py) needs a datastream nobody ever recorded: a
-world living a day with KNOWN ground truth, so the blank-slate theorem can assert the
-engine's beliefs track what actually happened. This module is that world, generalized
-from the origin proof's simulator (meerkat/brain/house_sim.py): there the domain was a
-synthetic foreign house and the one domain coupling was a celestial ephemeris import;
-here the domain is an N×M grid of cells walked by one agent, and every ambient signal
-rides the spec's own harmonic driver phase — no astronomy, no geography, no vendor.
+This is the canonical new-domain template (see docs/NEW_DOMAIN.md) AND the proof
+gate's own fixture: `proofs/blank_slate.py` and friends import this module rather
+than owning a copy, so the domain you'd copy to start your own world is exactly the
+one the gate proves comprehension on — no separate "example" vs "test fixture" drift.
+Generalized from the origin proof's simulator (meerkat/brain/house_sim.py): there the
+domain was a synthetic foreign house and the one domain coupling was a celestial
+ephemeris import; here the domain is an N×M grid of cells walked by one agent, and
+every ambient signal rides the spec's own harmonic driver phase — no astronomy, no
+geography, no vendor.
 
 Three exports matter:
 

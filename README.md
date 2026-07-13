@@ -3,6 +3,54 @@
 **A belief-field engine.** Describe a world as data; feed it observations; it holds a
 live, honest, uncertain comprehension of that world — and forecasts from it.
 
+## Install
+
+```bash
+git clone <this repo> && cd umwelt
+pip install -e .          # not on PyPI yet — local/editable install only
+```
+
+## Quickstart — a tiny world
+
+```python
+from datetime import datetime, timedelta, timezone
+from umwelt.spec.schema import DomainSpec, NodeSpec, BridgeSpec, BindingSpec, DriverSpec
+from umwelt.boot import build_engine
+
+spec = DomainSpec(
+    name="tiny-world",
+    nodes=(
+        NodeSpec("hall", parent=None, kind="root", roles=("occupied",)),
+        NodeSpec("den", parent="hall", roles=("occupied", "warmth"),
+                 role_modes={"occupied": "unitary", "warmth": "dissipative"}),
+    ),
+    bridges=(BridgeSpec("hall", "den", shared_roles=("occupied",), kind="open"),),
+    bindings=(
+        BindingSpec("den_motion", zone="den", role="occupied", normalizer="binary",
+                    force_observe=True),
+        BindingSpec("den_temp", zone="den", role="warmth",
+                    normalizer={"type": "regime", "center": 21, "width": 4}),
+    ),
+    drivers=(DriverSpec("day", period_s=86400.0),),
+)
+
+engine = build_engine(spec=spec)              # boots BLANK: max-entropy, located nowhere
+t = datetime(2026, 1, 5, 12, 0, tzinfo=timezone.utc)
+for i in range(10):
+    engine.ingest(sensor_readings={"den_motion": 1.0, "den_temp": 18.2},
+                  now=t + timedelta(seconds=10 * i))
+
+z = engine.field.clusters["den"].role_bloch("occupied")[2]
+print(f"den occupied: z={z:+.2f}")            # belief, not a flag — with uncertainty attached
+engine.save("engine_state.pkl")               # canonical, hash-stable, diffable
+```
+
+This is the gate-pinned path: the same construction the proof suite drives. Starting
+your own domain? [docs/NEW_DOMAIN.md](docs/NEW_DOMAIN.md) is the checklist, and
+[examples/gridworld/](examples/gridworld) is a complete one to copy.
+
+## Why this exists, and what it's already measured
+
 Its de-confounding mechanism was measured on 24 days of real home data: a naive learner
 credits the system's own actions at **10.8×** their true strength; the self-tagging
 learner cuts that bias **79%**. Every claim in this README links to a row in
@@ -39,43 +87,6 @@ DomainSpec (a world as data: nodes, roles, bridges, bindings, outputs, drivers)
   and dispatch nothing until you opt in; operator corrections move their learned
   geometry. Actions carry a decaying echo over a graph-derived confounding surface, so
   world-model learning discounts what the engine itself caused.
-
-## A tiny world
-
-```python
-from datetime import datetime, timedelta, timezone
-from umwelt.spec.schema import DomainSpec, NodeSpec, BridgeSpec, BindingSpec, DriverSpec
-from umwelt.boot import build_engine
-
-spec = DomainSpec(
-    name="tiny-world",
-    nodes=(
-        NodeSpec("hall", parent=None, kind="root", roles=("occupied",)),
-        NodeSpec("den", parent="hall", roles=("occupied", "warmth"),
-                 role_modes={"occupied": "unitary", "warmth": "dissipative"}),
-    ),
-    bridges=(BridgeSpec("hall", "den", shared_roles=("occupied",), kind="open"),),
-    bindings=(
-        BindingSpec("den_motion", zone="den", role="occupied", normalizer="binary",
-                    force_observe=True),
-        BindingSpec("den_temp", zone="den", role="warmth",
-                    normalizer={"type": "regime", "center": 21, "width": 4}),
-    ),
-    drivers=(DriverSpec("day", period_s=86400.0),),
-)
-
-engine = build_engine(spec=spec)              # boots BLANK: max-entropy, located nowhere
-t = datetime(2026, 1, 5, 12, 0, tzinfo=timezone.utc)
-for i in range(10):
-    engine.ingest(sensor_readings={"den_motion": 1.0, "den_temp": 18.2},
-                  now=t + timedelta(seconds=10 * i))
-
-z = engine.field.clusters["den"].role_bloch("occupied")[2]
-print(f"den occupied: z={z:+.2f}")            # belief, not a flag — with uncertainty attached
-engine.save("engine_state.pkl")               # canonical, hash-stable, diffable
-```
-
-This is the gate-pinned path: the same construction the proof suite drives.
 
 ## The novel parts
 
@@ -171,9 +182,9 @@ local daemon: one worker process per world, an events.db write-ahead log, snapsh
 and boot = snapshot + log-tail replay through the production ingest path. Its founding
 claim runs in the gate: **the daemon adds nothing and loses nothing** — wire replay
 hash-equals library replay, and a killed worker recovers its exact state
-(`tests/test_daemon_parity.py`). Start it with `python -m umweltd.supervisor`; talk to
-it with `umweltd.client.UmweltClient`. Harness repos stay offline-first; the daemon is
-the live deployment shape.
+(`tests/test_daemon_parity.py`). Start it with `umweltd` (or `docker compose up`); talk
+to it with `umweltd.client.UmweltClient` or the `umweltctl` CLI. Harness repos stay
+offline-first; the daemon is the live deployment shape.
 
 ## Origin & license
 

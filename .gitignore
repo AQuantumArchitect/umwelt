@@ -10,3 +10,11 @@ venv/
 *.sqlite3
 *.db
 .DS_Store
+
+# secrets — never commit real credentials, even to a private repo
+.env
+.env.*
+*.pem
+*.key
+*secret*
+*credential*

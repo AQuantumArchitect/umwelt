@@ -32,9 +32,11 @@ from __future__ import annotations
 import argparse
 import importlib
 import json
+import logging
+import os
 import signal
-import sys
 import threading
+import time
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -42,6 +44,8 @@ from urllib.parse import parse_qs, urlparse
 
 from umweltd.jsonutil import jsonable
 from umweltd.worldstore import WorldDir
+
+logger = logging.getLogger("umweltd.worker")
 
 FLUSH_SECS_DEFAULT = 30.0
 
@@ -66,7 +70,7 @@ def _make_webhook_dispatch(url: str):
                 headers={"Content-Type": "application/json"})
             urllib.request.urlopen(req, timeout=10)
         except Exception as exc:
-            print(f"[umweltd] webhook dispatch failed: {exc}", flush=True)
+            logger.warning("webhook dispatch failed: %r", exc)
     return _dispatch
 
 
@@ -108,8 +112,8 @@ class WorldHost:
         set_role(self.engine, ContextState.replay())
         replayed = self._replay_tail()
         if replayed:
-            print(f"[umweltd:{self.name}] replayed {replayed} tail batches "
-                  f"after cursor {self.dir.cursor()!r}", flush=True)
+            logger.info("replayed %d tail batches after cursor %r", replayed,
+                       self.dir.cursor())
         if self.manifest.get("gauge", "live") != "replay":
             set_role(self.engine, ContextState.live())
 
@@ -181,19 +185,24 @@ class WorldHost:
         return jsonable(list(recs))
 
     def health(self) -> dict:
+        def _size(p: Path) -> int:
+            return p.stat().st_size if p.exists() else 0
         return {"world": self.name,
                 "step": int(getattr(self.engine, "_step", -1)),
                 "last_event_ts": self.last_ts,
-                "seed_profile": getattr(self.engine, "seed_profile", None)}
+                "seed_profile": getattr(self.engine, "seed_profile", None),
+                "events_db_bytes": _size(self.dir.events_db),
+                "snapshot_bytes": _size(self.dir.snapshot_path)}
 
 
 class _Handler(BaseHTTPRequestHandler):
     host: WorldHost = None          # injected by serve()
 
-    def log_message(self, fmt, *args):  # quiet by default
+    def log_message(self, fmt, *args):  # replaced by the access log below
         pass
 
     def _send(self, code: int, payload) -> None:
+        self._last_status = code
         body = json.dumps(payload).encode()
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
@@ -205,7 +214,25 @@ class _Handler(BaseHTTPRequestHandler):
         n = int(self.headers.get("Content-Length") or 0)
         return json.loads(self.rfile.read(n) or b"{}")
 
+    def _fail(self, exc: Exception) -> None:
+        if isinstance(exc, (ValueError, KeyError)):
+            self._send(400, {"error": str(exc)})
+            return
+        # Unexpected — degrade, never crash the world, but don't leak internals
+        # (paths, tracebacks) into the response; the real exception goes to the log.
+        logger.error("unhandled error on %s: %r", self.path, exc)
+        self._send(500, {"error": "internal error"})
+
+    def _access_log(self, method: str, t0: float) -> None:
+        logger.info(json.dumps({
+            "event": "access", "world": self.host.name, "method": method,
+            "path": self.path, "status": getattr(self, "_last_status", None),
+            "latency_ms": round((time.time() - t0) * 1000, 2),
+        }))
+
     def do_GET(self):
+        t0 = time.time()
+        self._last_status = None
         url = urlparse(self.path)
         try:
             if url.path == "/health":
@@ -220,9 +247,13 @@ class _Handler(BaseHTTPRequestHandler):
             else:
                 self._send(404, {"error": f"no route {url.path}"})
         except Exception as exc:                     # degrade, never crash the world
-            self._send(500, {"error": str(exc)})
+            self._fail(exc)
+        finally:
+            self._access_log("GET", t0)
 
     def do_POST(self):
+        t0 = time.time()
+        self._last_status = None
         url = urlparse(self.path)
         try:
             if url.path == "/events":
@@ -232,7 +263,9 @@ class _Handler(BaseHTTPRequestHandler):
             else:
                 self._send(404, {"error": f"no route {url.path}"})
         except Exception as exc:
-            self._send(500, {"error": str(exc)})
+            self._fail(exc)
+        finally:
+            self._access_log("POST", t0)
 
 
 def serve(world_dir: Path, port: int = 0) -> None:
@@ -241,7 +274,7 @@ def serve(world_dir: Path, port: int = 0) -> None:
     server = ThreadingHTTPServer(("127.0.0.1", port), _Handler)
     actual_port = server.server_address[1]
     host.dir.port_path.write_text(str(actual_port))
-    print(f"[umweltd:{host.name}] serving on 127.0.0.1:{actual_port}", flush=True)
+    logger.info("world %r serving on 127.0.0.1:%d", host.name, actual_port)
 
     def _shutdown(signum, frame):
         try:
@@ -259,6 +292,8 @@ def serve(world_dir: Path, port: int = 0) -> None:
 
 
 def main() -> None:
+    logging.basicConfig(level=os.environ.get("UMWELTD_LOG_LEVEL", "INFO"),
+                        format="%(asctime)s %(levelname)s %(name)s %(message)s")
     ap = argparse.ArgumentParser(description="umweltd world worker")
     ap.add_argument("--dir", required=True, help="the world directory")
     ap.add_argument("--port", type=int, default=0, help="TCP port (0 = ephemeral)")

@@ -55,7 +55,19 @@ class NodeSpec:
     reduce: str | None = None               # derived belief over children's shared role:
                                             # "max" | "mean" | "or" (see spec/derived.py)
     params: dict = field(default_factory=dict)   # learnable priors for this node:
-                                                 # {name: (default, sigma, lo, hi)}
+                                                 # {name: (default, sigma, lo, hi)}. The
+                                                 # meaningful keys are read by
+                                                 # learning/calibration.py and
+                                                 # substrate/density_matrix.py — chiefly
+                                                 # "gamma_diss" (default dissipative
+                                                 # relaxation rate, ALL roles) and
+                                                 # "gamma_diss_{role}" (per-role override,
+                                                 # e.g. "gamma_diss_drift"). A bare
+                                                 # "gamma" key is NOT one of them and is
+                                                 # silently inert — it will not move
+                                                 # anything. See docs/FIELD_NOTES.md §1
+                                                 # for when a role needs to be dissipative
+                                                 # at all (role_modes, above).
 
 
 @dataclass(frozen=True)

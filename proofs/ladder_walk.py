@@ -23,7 +23,7 @@ next bin). Lower RMSE is better; the floor to beat is persistence.
 PORTING DECISION: the origin harness also loaded its recorded 24-day cassette
 (load_reports / a forward-filled truth PSV); that tape format and the tape itself stay
 with the origin. Here the stream is the deterministic synthetic gridworld walk from
-proofs/_gridworld.py — the machinery is identical, the data is not, and no number
+examples/gridworld/world.py — the machinery is identical, the data is not, and no number
 measured here speaks for the origin's home.
 
 VERDICT OF RECORD (the origin deployment, 2026-07-04 — real 24-day cassette, 6908
@@ -53,7 +53,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from proofs._gridworld import agent_walk, binned_truth, grid_adjacency, grid_cells, sparse_reports
+from examples.gridworld.world import agent_walk, binned_truth, grid_adjacency, grid_cells, sparse_reports
 from umwelt.learning.observation_trust import ObservationTrust
 from umwelt.substrate.cumulant_cluster import CumulantCluster
 

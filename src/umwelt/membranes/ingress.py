@@ -353,10 +353,16 @@ class SensorBridge:
             )
 
         node_info = self._node_info.get(zone)
-        if node_info and qubit_role not in node_info["role_index"]:
-            logger.warning(
-                "Role '%s' not in node '%s' roles %s — signal %s may be ignored",
-                qubit_role, zone, node_info["roles"], sensor_id,
+        if node_info is None:
+            raise ValueError(
+                f"binding for signal {sensor_id!r} targets node {zone!r}, which does "
+                f"not exist in the graph (known nodes: {sorted(self._node_info)!r})"
+            )
+        if qubit_role not in node_info["role_index"]:
+            raise ValueError(
+                f"binding for signal {sensor_id!r} targets role {qubit_role!r} on "
+                f"node {zone!r}, but {zone!r} only declares roles "
+                f"{node_info['roles']!r}"
             )
 
         binding = SensorBinding(

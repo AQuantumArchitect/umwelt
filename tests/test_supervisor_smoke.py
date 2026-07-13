@@ -32,7 +32,7 @@ def _wait_http(url: str, timeout: float = 30.0) -> None:
 @pytest.mark.slow
 def test_supervisor_lifecycle(tmp_path):
     (tmp_path / "world_spec.py").write_text(
-        "from proofs._gridworld import gridworld_spec\nSPEC = gridworld_spec()\n")
+        "from examples.gridworld.world import gridworld_spec\nSPEC = gridworld_spec()\n")
     env = os.environ.copy()
     env["UMWELTD_HOME"] = str(tmp_path / "home")
     env["UMWELTD_API_KEY"] = "test-key-123"

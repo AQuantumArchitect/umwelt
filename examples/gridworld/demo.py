@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Gridworld demo — boot blank, replay a synthetic day, watch belief ease.
 
-A viewer over the proof harness (proofs/_gridworld.py — the single source of the spec
-and the deterministic day). Prints the agent_near belief per cell as a text heatmap at
-checkpoints: the occupied cell rises on a sighting; vacated cells EASE back toward
-uncertainty instead of snapping — the belief carries how sure it is.
+A viewer over examples/gridworld/world.py — the single source of the spec and the
+deterministic day, also imported directly by the proof gate (proofs/blank_slate.py
+and friends), so this example and what the gate proves never drift apart. Prints the
+agent_near belief per cell as a text heatmap at checkpoints: the occupied cell rises
+on a sighting; vacated cells EASE back toward uncertainty instead of snapping — the
+belief carries how sure it is.
 
 Run from the repo root:  python3 examples/gridworld/demo.py
 """
@@ -15,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from proofs._gridworld import (agent_walk, grid_cells, gridworld_spec, occupied_cell,
+from examples.gridworld.world import (agent_walk, grid_cells, gridworld_spec, occupied_cell,
                                runner_batches, synthesize_rows)
 from umwelt.boot import build_engine
 

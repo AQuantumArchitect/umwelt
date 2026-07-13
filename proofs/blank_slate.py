@@ -2,7 +2,7 @@
 
 This is the library's flagship theorem, generalized from the origin deployment's b10.0
 gate (meerkat tests/brain/test_foreign_blank_slate.py — there the foreign world was a
-synthetic house; here it is a gridworld, proofs/_gridworld.py): a max-entropy, unlocated
+synthetic house; here it is a gridworld, examples/gridworld/world.py): a max-entropy, unlocated
 engine boots a DomainSpec, replays a deterministic synthetic day through the SAME ingest
 path a recorded deployment replays (events.replay_sensor_batches → BrainRunner under the
 REPLAY gauge) — then the assertions that it actually comprehended:
@@ -24,7 +24,7 @@ from __future__ import annotations
 import math
 from datetime import datetime, timedelta
 
-from proofs._gridworld import (
+from examples.gridworld.world import (
     SITE, agent_walk, grid_cells, gridworld_spec, last_vacated, occupied_cell,
     runner_batches, synthesize_rows,
 )

@@ -18,11 +18,14 @@ Run: python -m umweltd.supervisor [--port 7071]. Existing worlds respawn at star
 from __future__ import annotations
 
 import argparse
+import hmac
 import json
+import logging
 import os
 import re
 import subprocess
 import sys
+import threading
 import time
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -30,9 +33,14 @@ from pathlib import Path
 
 from umweltd.worldstore import WorldDir
 
+logger = logging.getLogger("umweltd.supervisor")
+
 DEFAULT_PORT = 7071
 NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 SPAWN_TIMEOUT_S = 60.0
+WATCHDOG_INTERVAL_S = float(os.environ.get("UMWELTD_WATCHDOG_INTERVAL_S", "10.0"))
+CRASH_WINDOW_S = 300.0
+CRASH_GIVEUP_COUNT = 5
 
 
 def home() -> Path:
@@ -42,6 +50,12 @@ def home() -> Path:
 class Supervisor:
     def __init__(self):
         self.procs: dict[str, subprocess.Popen] = {}
+        # Worlds that SHOULD be running — create()/start() add, stop() removes. The
+        # watchdog only ever acts on this set, so an operator-requested stop is never
+        # mistaken for a crash.
+        self.desired: set[str] = set()
+        self._crash_times: dict[str, list[float]] = {}
+        self._watchdog_disabled: set[str] = set()
 
     def worlds_root(self) -> Path:
         root = home() / "worlds"
@@ -82,14 +96,23 @@ class Supervisor:
             raise ValueError(f"bad world name {name!r}")
         if not body.get("spec"):
             raise ValueError("a world needs a spec ref ('module:ATTR')")
+        max_worlds = os.environ.get("UMWELTD_MAX_WORLDS")
+        if max_worlds is not None and len(self.catalog()) >= int(max_worlds):
+            raise ValueError(
+                f"world cap reached ({max_worlds}, UMWELTD_MAX_WORLDS) — refusing to "
+                f"create {name!r}")
         wd = WorldDir(self.worlds_root() / name)
         if wd.manifest_path.exists():
             raise ValueError(f"world {name!r} already exists")
         wd.write_manifest({k: v for k, v in body.items() if v is not None})
         port = self.spawn(name)
+        self.desired.add(name)
         return {"name": name, "port": port}
 
     def stop(self, name: str) -> dict:
+        self.desired.discard(name)
+        self._watchdog_disabled.discard(name)
+        self._crash_times.pop(name, None)
         proc = self.procs.get(name)
         if proc and proc.poll() is None:
             proc.terminate()
@@ -100,6 +123,9 @@ class Supervisor:
         wd = WorldDir(self.worlds_root() / name)
         if not wd.manifest_path.exists():
             raise KeyError(f"unknown world {name!r}")
+        self.desired.add(name)
+        self._watchdog_disabled.discard(name)
+        self._crash_times.pop(name, None)
         proc = self.procs.get(name)
         if proc and proc.poll() is None:
             return {"name": name, "port": int(wd.port_path.read_text()), "running": True}
@@ -110,9 +136,37 @@ class Supervisor:
             if WorldDir(d).manifest_path.exists():
                 try:
                     self.spawn(d.name)
+                    self.desired.add(d.name)
                 except Exception as exc:
-                    print(f"[umweltd] world {d.name!r} failed to spawn: {exc}",
-                          flush=True)
+                    logger.warning("world %r failed to spawn: %r", d.name, exc)
+
+    def watchdog_tick(self) -> None:
+        """Notice a world that died on its own (not via stop()) and restart it. Backs
+        off after repeated crashes in a rolling window rather than tight-looping a
+        world that can never come up — a manual start() clears the backoff."""
+        now = time.time()
+        for name in list(self.desired):
+            if name in self._watchdog_disabled:
+                continue
+            proc = self.procs.get(name)
+            if proc is None or proc.poll() is None:
+                continue                                    # never spawned yet, or still alive
+            history = self._crash_times.setdefault(name, [])
+            history.append(now)
+            history[:] = [t for t in history if now - t <= CRASH_WINDOW_S]
+            if len(history) >= CRASH_GIVEUP_COUNT:
+                self._watchdog_disabled.add(name)
+                logger.error("world %r crashed %d times in %.0fs — giving up "
+                            "auto-restart, needs manual /start", name, len(history),
+                            CRASH_WINDOW_S)
+                continue
+            logger.warning("world %r crashed (rc=%s) — auto-restarting (%d/%d in "
+                           "window)", name, proc.returncode, len(history),
+                           CRASH_GIVEUP_COUNT)
+            try:
+                self.spawn(name)
+            except Exception as exc:
+                logger.error("world %r auto-restart failed: %r", name, exc)
 
     def proxy(self, name: str, rest: str, method: str, body: bytes | None) -> tuple[int, bytes]:
         wd = WorldDir(self.worlds_root() / name)
@@ -134,12 +188,16 @@ class _Handler(BaseHTTPRequestHandler):
     api_key: str | None = None      # UMWELTD_API_KEY; None = open (localhost trust)
 
     def log_message(self, fmt, *args):
-        pass
+        pass                                                # replaced by the access log below
 
     def _authorized(self) -> bool:
-        return self.api_key is None or self.headers.get("X-API-Key") == self.api_key
+        # Constant-time compare — a plain `==` short-circuits on the first mismatched
+        # byte, which leaks key-length/prefix information through response timing.
+        return self.api_key is None or hmac.compare_digest(
+            self.headers.get("X-API-Key") or "", self.api_key)
 
     def _send(self, code: int, payload) -> None:
+        self._last_status = code
         body = payload if isinstance(payload, bytes) else json.dumps(payload).encode()
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
@@ -148,13 +206,15 @@ class _Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def _route(self, method: str) -> None:
-        if not self._authorized():
-            self._send(401, {"error": "missing or wrong X-API-Key"})
-            return
-        parts = [p for p in self.path.split("?")[0].split("/") if p]
-        n = int(self.headers.get("Content-Length") or 0)
-        raw = self.rfile.read(n) if n else None
+        t0 = time.time()
+        self._last_status = None
         try:
+            if not self._authorized():
+                self._send(401, {"error": "missing or wrong X-API-Key"})
+                return
+            parts = [p for p in self.path.split("?")[0].split("/") if p]
+            n = int(self.headers.get("Content-Length") or 0)
+            raw = self.rfile.read(n) if n else None
             if parts == ["health"]:
                 self._send(200, {"ok": True, "worlds": self.sup.catalog()})
             elif parts == ["worlds"] and method == "GET":
@@ -177,7 +237,16 @@ class _Handler(BaseHTTPRequestHandler):
         except (ValueError, KeyError) as exc:
             self._send(400, {"error": str(exc)})
         except Exception as exc:
-            self._send(500, {"error": str(exc)})
+            # Log the real exception server-side; the client only gets a generic
+            # message — a 500 body must never leak internals (paths, tracebacks).
+            logger.error("unhandled error on %s: %r", self.path, exc)
+            self._send(500, {"error": "internal error"})
+        finally:
+            logger.info(json.dumps({
+                "event": "access", "method": method, "path": self.path,
+                "status": self._last_status,
+                "latency_ms": round((time.time() - t0) * 1000, 2),
+            }))
 
     def do_GET(self):
         self._route("GET")
@@ -186,7 +255,18 @@ class _Handler(BaseHTTPRequestHandler):
         self._route("POST")
 
 
+def _watchdog_loop(sup: Supervisor) -> None:
+    while True:
+        time.sleep(WATCHDOG_INTERVAL_S)
+        try:
+            sup.watchdog_tick()
+        except Exception:
+            logger.exception("watchdog tick failed")
+
+
 def main() -> None:
+    logging.basicConfig(level=os.environ.get("UMWELTD_LOG_LEVEL", "INFO"),
+                        format="%(asctime)s %(levelname)s %(name)s %(message)s")
     ap = argparse.ArgumentParser(description="umweltd supervisor")
     ap.add_argument("--port", type=int, default=DEFAULT_PORT)
     ap.add_argument("--host", default="127.0.0.1",
@@ -213,8 +293,9 @@ def main() -> None:
         ctx.load_cert_chain(cert, key)
         server.socket = ctx.wrap_socket(server.socket, server_side=True)
         scheme = "https"
-    print(f"[umweltd] supervising {home()} on {scheme}://{args.host}:{args.port}"
-          f"{' (api-key required)' if api_key else ''}", flush=True)
+    threading.Thread(target=_watchdog_loop, args=(sup,), daemon=True).start()
+    logger.info("supervising %s on %s://%s:%s%s", home(), scheme, args.host, args.port,
+               " (api-key required)" if api_key else "")
     try:
         server.serve_forever()
     finally:

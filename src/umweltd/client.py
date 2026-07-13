@@ -34,13 +34,28 @@ class UmweltClient:
             return json.loads(resp.read() or b"null")
 
     # ── supervisor-level ────────────────────────────────────────────────────────────
+    def _admin_call(self, method: str, path: str, payload: dict | None = None):
+        """Supervisor-level calls address `{base}/...` directly (not the
+        `/worlds/<world>/` prefix `_call` uses), so they work regardless of what
+        `self.world` is set to."""
+        data = json.dumps(payload).encode() if payload is not None else None
+        req = urllib.request.Request(f"{self.base}/{path.lstrip('/')}", data=data,
+                                     method=method, headers=self._headers())
+        with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+            return json.loads(resp.read() or b"null")
+
     def create_world(self, name: str, spec: str, vocabulary: str | None = None, **knobs):
         payload = {"name": name, "spec": spec, "vocabulary": vocabulary, **knobs}
-        data = json.dumps(payload).encode()
-        req = urllib.request.Request(f"{self.base}/worlds", data=data, method="POST",
-                                     headers=self._headers())
-        with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-            return json.loads(resp.read())
+        return self._admin_call("POST", "worlds", payload)
+
+    def list_worlds(self) -> list:
+        return self._admin_call("GET", "worlds")
+
+    def stop_world(self, name: str) -> dict:
+        return self._admin_call("POST", f"worlds/{name}/stop")
+
+    def start_world(self, name: str) -> dict:
+        return self._admin_call("POST", f"worlds/{name}/start")
 
     # ── world-level ─────────────────────────────────────────────────────────────────
     def ingest(self, events: list[tuple], flush_secs: float | None = None) -> dict:

@@ -22,7 +22,7 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 sys.path.insert(0, str(REPO))
 
-from proofs._gridworld import agent_walk, gridworld_spec, runner_batches, synthesize_rows
+from examples.gridworld.world import agent_walk, gridworld_spec, runner_batches, synthesize_rows
 from umweltd.client import UmweltClient
 
 FLUSH_SECS = 30.0
@@ -50,7 +50,7 @@ def _direct_hash(rows) -> str:
 def world(tmp_path):
     """A gridworld world dir + a live worker subprocess; yields (client, dir, proc)."""
     (tmp_path / "world_spec.py").write_text(
-        "from proofs._gridworld import gridworld_spec\nSPEC = gridworld_spec()\n")
+        "from examples.gridworld.world import gridworld_spec\nSPEC = gridworld_spec()\n")
     wdir = tmp_path / "worlds" / "grid"
     wdir.mkdir(parents=True)
     (wdir / "world.json").write_text(json.dumps(
@@ -98,6 +98,23 @@ def test_wire_replay_hash_equals_library_replay(world, tmp_path):
         assert state and isinstance(state, dict)
         b = client.belief("cell_1_1", "agent_near")
         assert -1.0 <= b["z"] <= 1.0
+    finally:
+        sys.path.remove(str(tmp_path))
+
+
+def test_health_reports_resource_sizes(world, tmp_path):
+    client, wdir, proc, spawn, env = world
+    sys.path.insert(0, str(tmp_path))
+    try:
+        assert client.health()["events_db_bytes"] == 0
+        assert client.health()["snapshot_bytes"] == 0
+        walk = agent_walk(seed=7, days=0.1)
+        rows = synthesize_rows(gridworld_spec(), walk, seed=7)
+        client.ingest(rows)
+        client.snapshot()
+        health = client.health()
+        assert health["events_db_bytes"] > 0
+        assert health["snapshot_bytes"] > 0
     finally:
         sys.path.remove(str(tmp_path))
 

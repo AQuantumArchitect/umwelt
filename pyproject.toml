@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "umwelt-engine"
-version = "0.1.0.dev0"
+version = "0.1.0"
 description = "A belief-field engine: describe a world as data, feed it observations, read live honest comprehension and forecasts."
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -27,6 +27,7 @@ viz = []
 [project.scripts]
 umweltd = "umweltd.supervisor:main"
 umweltd-worker = "umweltd.worker:main"
+umweltctl = "umweltd.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
