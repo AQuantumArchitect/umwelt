@@ -1,7 +1,7 @@
 """Wall-clock pacing + the blank mixed-belief floor — the sparse-cadence levers.
 
 Pins the two fixes the first foreign-cadence world (daily market bars) forced:
-  1. spec.tick_s honors the silence between sparse batches as bounded free-evolution
+  1. spec.ingest_hold_s honors the silence between sparse batches as bounded free-evolution
      catch-up — OFF by default and byte-identical to the origin behavior when off;
   2. a blank boot starts ANALOG dissipative beliefs maximally mixed (the ground pole
      is a false certainty for a continuous quantity), while event/unitary roles keep
@@ -26,7 +26,7 @@ def _register_vocab():
         roles.register_role_mode("t_ping", "unitary")
 
 
-def _spec(tick_s: float | None) -> DomainSpec:
+def _spec(ingest_hold_s: float | None) -> DomainSpec:
     _register_vocab()
     return DomainSpec(
         name="pacing-world",
@@ -35,7 +35,7 @@ def _spec(tick_s: float | None) -> DomainSpec:
         bindings=(BindingSpec("lvl", zone="cell", role="t_level",
                               normalizer={"type": "range", "lo": 0.0, "hi": 10.0}),
                   BindingSpec("png", zone="cell", role="t_ping", normalizer="binary")),
-        tick_s=tick_s,
+        ingest_hold_s=ingest_hold_s,
     )
 
 
@@ -60,7 +60,7 @@ def test_blank_boot_mixes_analog_dissipative_beliefs():
 
 
 def test_off_means_off_no_catchup_ever_runs():
-    """tick_s=None (default): the pacing path provably never fires, whatever the wall
+    """ingest_hold_s=None (default): the pacing path provably never fires, whatever the wall
     gaps look like. (Wall time already reaches the LEARNING layers legitimately —
     calibration is time-aware — so the pin is the catch-up counter, not a hash.)"""
     engine = build_engine(spec=_spec(None), population=False)
@@ -71,7 +71,7 @@ def test_off_means_off_no_catchup_ever_runs():
 
 
 def test_pacing_defeats_sparse_cadence_starvation():
-    """The starvation pin: daily batches on a paced world (tick_s=1h, zero-order
+    """The starvation pin: daily batches on a paced world (ingest_hold_s=1h, zero-order
     hold) drive the belief far further than the same batches tick-driven — and land
     near the dense-republish reference the market harness had to emulate by hand."""
     paced = build_engine(spec=_spec(3600.0), population=False)

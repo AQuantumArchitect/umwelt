@@ -62,7 +62,7 @@ Client: `umweltd.client.UmweltClient` (stdlib-only).
   Action as JSON (`tests/test_webhook_dispatch.py`); shadow remains the default and
   the law, and a dead sink never kills the world.
 - **Sparse cadence is now a spec declaration**: give the world's DomainSpec a
-  `tick_s` and the engine honors ingest gaps as bounded zero-order hold
+  `ingest_hold_s` and the engine honors ingest gaps as bounded zero-order hold
   (`tests/test_wall_pacing.py`) — no pusher-side republish burst needed.
 - Still Phase S3+: multi-tenant quotas, vocabulary plugin registry, per-output
   autonomy billing, engine chaining across worlds.
