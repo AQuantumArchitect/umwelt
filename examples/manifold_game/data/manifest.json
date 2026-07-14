@@ -1,0 +1,32 @@
+{
+ "source": "/tmp/sw_player_seats/seat_m1/godot/app_userdata/SpaceWheat - Quantum Farm/rig/results.jsonl",
+ "turns": 806,
+ "rows": 2282,
+ "turn_s": 20.0,
+ "start": "2026-01-05T00:00:00+00:00",
+ "counts": {
+  "wallet": 2278,
+  "bubbles": 0,
+  "flags": 4
+ },
+ "emoji_map": {
+  "☀": "black_sun_with_rays",
+  "⚙": "gear",
+  "❄": "snowflake",
+  "🌱": "seedling",
+  "🌾": "ear_of_rice",
+  "🍂": "fallen_leaf",
+  "🍄": "mushroom",
+  "🍞": "bread",
+  "🍼": "baby_bottle",
+  "🐺": "wolf_face",
+  "👥": "busts_in_silhouette",
+  "💀": "skull",
+  "💧": "droplet",
+  "💰": "money_bag",
+  "🔥": "fire",
+  "🦅": "eagle",
+  "🪵": "wood"
+ },
+ "note": "synthetic monotonic clock (turn index x turn_s); player-visible observations only"
+}

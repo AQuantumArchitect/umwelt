@@ -126,8 +126,11 @@ decisions, and time are all declarative; the engine ships zero domain vocabulary
 test fails the build if a domain word ever appears in engine source.
 
 *Further out, honestly hedged:* Berry-phase process-time (path-topology memory — the
-geometry is test-pinned: a loop accumulates γ=−π, an out-and-back ≈0; the *decision*
-demo is owed) and free-energy reward channels (framework shipped; effect sizes owed).
+geometry is test-pinned, and the *decision* demo is now delivered on real foreign
+geometry: a harvest gate reading only accumulated γ flips ~6× sooner on a wound path
+than a pole-hugging control, opposite choices at a fixed budget —
+`examples/manifold_game/berry_decision.py`; LIVE decision authority still owed) and
+free-energy reward channels (framework shipped; effect sizes owed).
 
 ## The ledger
 
@@ -179,6 +182,7 @@ are in [docs/FIELD_NOTES.md](docs/FIELD_NOTES.md).
 | [Sentiment ↔ market](examples/sentiment-market/) | Trust-web fusion; ships its own baselines | Sketch |
 | [Smart home](examples/smarthome/) | The origin — 18 months live | Deployed (meerkat) |
 | [Mirror](examples/mirror/) | umweltd observing itself through its own API | Live demo (first sitting logged) |
+| [Manifold game](examples/manifold_game/) | A quantum farming game as the second foreign world; its real tapes pay the Berry-decision demo | Real-data replay (runs in CI) |
 
 ## The engine as a service
 
