@@ -1,0 +1,74 @@
+{
+ "flags_fired": {
+  "hi": 10.0,
+  "lo": 9.0
+ },
+ "wallet_baby_bottle": {
+  "hi": 2.0,
+  "lo": 1.0
+ },
+ "wallet_black_sun_with_rays": {
+  "hi": 71.0,
+  "lo": 70.0
+ },
+ "wallet_bread": {
+  "hi": 70.0,
+  "lo": 63.0
+ },
+ "wallet_busts_in_silhouette": {
+  "hi": 38.0,
+  "lo": 29.0
+ },
+ "wallet_droplet": {
+  "hi": 6.0,
+  "lo": 5.0
+ },
+ "wallet_eagle": {
+  "hi": 21.0,
+  "lo": 0.0
+ },
+ "wallet_ear_of_rice": {
+  "hi": 22.0,
+  "lo": 21.0
+ },
+ "wallet_fallen_leaf": {
+  "hi": 44.0,
+  "lo": 26.0
+ },
+ "wallet_fire": {
+  "hi": 35.0,
+  "lo": 34.0
+ },
+ "wallet_gear": {
+  "hi": 3.0,
+  "lo": 2.0
+ },
+ "wallet_money_bag": {
+  "hi": 16.0,
+  "lo": 15.0
+ },
+ "wallet_mushroom": {
+  "hi": 2.0,
+  "lo": 1.0
+ },
+ "wallet_seedling": {
+  "hi": 103.0,
+  "lo": 102.0
+ },
+ "wallet_skull": {
+  "hi": 15.0,
+  "lo": 14.0
+ },
+ "wallet_snowflake": {
+  "hi": 14.0,
+  "lo": 13.0
+ },
+ "wallet_wolf_face": {
+  "hi": 54.0,
+  "lo": 50.0
+ },
+ "wallet_wood": {
+  "hi": 9.0,
+  "lo": 8.0
+ }
+}
