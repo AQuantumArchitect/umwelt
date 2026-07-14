@@ -1,0 +1,39 @@
+{
+  "_provenance": "Real multi-agent coordination data, 2026-07-14: a relay of nine haiku-class LLM playtester legs driving a quantum farming game (SpaceWheat) through a player-parity seat, supervised by one coordinating model. Each leg ended with a structured self-report; the supervisor verified every claim against ground truth (banked checkpoint manifests / the checkpoint directory). z encoding: +1 = 'new story flags fired this leg' (or 'my banks landed'), -1 = the negation. Confidences are the honest eta of each source class: agent self-reports confabulate (this tape is the proof), directory listings and manifest diffs do not.",
+  "_sources": {
+    "haiku_flags": "the leg's own new_flags_fired claim (eta 0.7 - a fluent, structured, sometimes wrong report)",
+    "manifest_flags": "supervisor's diff of banked checkpoint flag manifests vs the leg's starting checkpoint (eta 1.0)",
+    "supervisor_flags": "the coordinating model's written verdict at the time (eta 0.9 - it ran the manifest check, so it agrees with it; included so the leave-one-out mode has three heterogeneous reporters and needs no privileged oracle)",
+    "haiku_banks": "the leg's claim that its checkpoint banks landed (eta 0.7)",
+    "dir_banks": "ls of the checkpoints directory (eta 1.0)"
+  },
+  "ticks": [
+    {"leg": "m4",  "flags": {"haiku_flags": -1.0, "manifest_flags":  1.0, "supervisor_flags":  1.0},
+     "banks": {"haiku_banks": 1.0, "dir_banks": 1.0},
+     "note": "UNDER-claim: reported no new flags; new_voices had fired (the leg did not recognize its own breakthrough)"},
+    {"leg": "m5",  "flags": {"haiku_flags":  1.0, "manifest_flags": -1.0, "supervisor_flags": -1.0},
+     "banks": {"haiku_banks": 1.0, "dir_banks": 1.0},
+     "note": "OVER-claim: listed ten act-1 flags from the story tab as newly fired; zero were new"},
+    {"leg": "m6",  "flags": {"haiku_flags":  1.0, "manifest_flags": -1.0, "supervisor_flags": -1.0},
+     "banks": {"haiku_banks": 1.0, "dir_banks": 1.0},
+     "note": "OVER-claim: invented the token 'story_progression_2_new_flags'; zero new"},
+    {"leg": "m7",  "flags": {"haiku_flags":  1.0, "manifest_flags":  1.0, "supervisor_flags":  1.0},
+     "banks": {"haiku_banks": 1.0, "dir_banks": 1.0},
+     "note": "ACCURATE: claimed three act-2 beats; manifests confirmed all three (spring_connects, pond_depths, pond_breathes)"},
+    {"leg": "m8",  "flags": {"haiku_flags": -1.0, "manifest_flags": -1.0, "supervisor_flags": -1.0},
+     "banks": {"haiku_banks": 1.0, "dir_banks": -1.0},
+     "note": "flags accurate; BANK CONFABULATED: reported banking, no file ever existed - the next leg loaded a phantom checkpoint"},
+    {"leg": "m9",  "flags": {"haiku_flags": -1.0, "manifest_flags": -1.0, "supervisor_flags": -1.0},
+     "banks": {"haiku_banks": 1.0, "dir_banks": 1.0},
+     "note": "accurate on both (though the whole leg ran from the wrong state because of m8's phantom bank)"},
+    {"leg": "m10", "flags": {"haiku_flags":  1.0, "manifest_flags": -1.0, "supervisor_flags": -1.0},
+     "banks": {"haiku_banks": 1.0, "dir_banks": 1.0},
+     "note": "OVER-claim on flags (listed a biome-load event as a story flag); banks honest - listed exactly the two that landed"},
+    {"leg": "m11", "flags": {"haiku_flags": -1.0, "manifest_flags": -1.0, "supervisor_flags": -1.0},
+     "banks": {"haiku_banks": 1.0, "dir_banks": 1.0},
+     "note": "accurate on both; precise stuck-point reporting led to a real physics bug fix"},
+    {"leg": "m12", "flags": {"haiku_flags": -1.0, "manifest_flags": -1.0, "supervisor_flags": -1.0},
+     "banks": {"haiku_banks": 1.0, "dir_banks": 1.0},
+     "note": "accurate on both"}
+  ]
+}
