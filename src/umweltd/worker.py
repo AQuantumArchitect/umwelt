@@ -58,6 +58,13 @@ FLUSH_SECS_DEFAULT = 30.0
 
 def _call_ref(ref: str) -> None:
     module_name, _, attr = ref.partition(":")
+    if not module_name or not attr:
+        # The supervisor's front-door gate refuses this shape with a 400 before a
+        # worker ever spawns; this mirror keeps a directly-booted worker's death
+        # note just as precise (the log is all a worker has).
+        raise ValueError(
+            f"vocabulary ref {ref!r} must be 'module:function' — a bare module "
+            f"name gives the worker nothing to call")
     fn = getattr(importlib.import_module(module_name), attr)
     fn()
 

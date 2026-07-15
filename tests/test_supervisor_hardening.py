@@ -39,7 +39,9 @@ class _FakeProc:
 
 
 def _supervisor(tmp_path, monkeypatch):
-    """A Supervisor with spawn() faked to record calls and mark the world alive."""
+    """A Supervisor with spawn() faked to record calls and mark the world alive.
+    The front-door spec gate is faked too ('x:Y' resolves nothing real) — its real
+    subprocess behavior is pinned by tests/test_front_door.py."""
     monkeypatch.setenv("UMWELTD_HOME", str(tmp_path))
     monkeypatch.delenv("UMWELTD_MAX_WORLDS", raising=False)
     sup = Supervisor()
@@ -51,6 +53,7 @@ def _supervisor(tmp_path, monkeypatch):
         return 12345
 
     monkeypatch.setattr(sup, "spawn", fake_spawn)
+    monkeypatch.setattr(sup, "_gate_spec", lambda body: None)
     return sup, spawn_calls
 
 

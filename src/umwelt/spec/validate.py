@@ -46,6 +46,7 @@ class CheckResult:
     ok: bool
     detail: str = ""
     skipped: bool = False
+    warning: bool = False       # ok=True advisory: never gates, always teaches
 
 
 @dataclass
@@ -65,13 +66,18 @@ class ValidationReport:
             "spec": self.spec_name,
             "ok": self.ok,
             "checks": [{"name": c.name, "ok": c.ok, "skipped": c.skipped,
-                        "detail": c.detail} for c in self.checks],
+                        "warning": c.warning, "detail": c.detail}
+                       for c in self.checks],
         }
+
+    def warnings(self) -> list:
+        return [c for c in self.checks if c.warning]
 
     def summary(self) -> str:
         lines = [f"spec {self.spec_name!r}: {'OK' if self.ok else 'FAILED'}"]
         for c in self.checks:
-            mark = "skip" if c.skipped else ("ok " if c.ok else "FAIL")
+            mark = ("skip" if c.skipped else "warn" if c.warning
+                    else "ok " if c.ok else "FAIL")
             lines.append(f"  [{mark}] {c.name}" + (f" — {c.detail}" if c.detail else ""))
         return "\n".join(lines)
 
@@ -161,13 +167,20 @@ def _select_probes(binding) -> "tuple[list[float] | None, str]":
 
 
 def validate_spec(spec_or_ref, *, require_shadow: bool = True,
-                  exercise_rounds: int = 3) -> ValidationReport:
+                  exercise_rounds: int = 3,
+                  resolve_only: bool = False) -> ValidationReport:
     """Run every gate check against a DomainSpec (or a 'module:ATTR' ref).
 
     require_shadow=True (the default, and what the CLI enforces unless
     --allow-live-outputs) fails any OutputSpec with shadow=False — the shadow law: a
     freshly authored world decides visibly and dispatches nothing until a human
     promotes it.
+
+    resolve_only=True stops after resolve + schema_sanity (+ advisory warnings) —
+    no engine boot, no synthetic exercise. The cheap front-door form: umweltd's
+    supervisor runs it in a fresh subprocess before a worker ever spawns, so a
+    manifest that would kill the worker fails as a 400 with this report's exact
+    error text instead of a worker-exit 500.
     """
     from umwelt.spec.schema import DomainSpec, load_spec
 
@@ -236,7 +249,59 @@ def validate_spec(spec_or_ref, *, require_shadow: bool = True,
                             f"a new world's outputs decide visibly and dispatch nothing "
                             f"until explicitly promoted (pass --allow-live-outputs to "
                             f"waive for a hand-audited spec)")
+    # NodeSpec.params shape: each value must be what ParameterBundle.from_dict accepts
+    # — (default, sigma) or (default, sigma, lo, hi). A bare float here used to die as
+    # a TypeError deep in the worker (the first external hive deployment's scar #2);
+    # fail it HERE, naming the node and the key.
+    for n in mspec.nodes:
+        for key, val in (n.params or {}).items():
+            if (not isinstance(val, (tuple, list)) or len(val) not in (2, 4)
+                    or not all(isinstance(x, (int, float)) and not isinstance(x, bool)
+                               for x in val)):
+                problems.append(
+                    f"node {n.name!r} param {key!r}: expected (default, sigma, lo, hi) "
+                    f"or (default, sigma), got "
+                    f"{type(val).__name__} {val!r}")
     checks.append(CheckResult("schema_sanity", not problems, "; ".join(problems)))
+
+    # ── 2b. gamma_vs_hold (WARNING, never a failure) ─────────────────────────────
+    # The mute-world scar (external hive deployment #3): a spec with ingest_hold_s
+    # set and dissipative gammas fast enough that gamma × hold > 3 relaxes ~95%+ of
+    # any belief across ONE hold — sparse session batches land on a field that has
+    # already forgotten everything, with no error anywhere. Only spec-DECLARED
+    # gammas (gamma_diss / gamma_diss_{role}) are judged; a spec that declares none
+    # is left to the engine's defaults without noise.
+    hold = getattr(spec, "ingest_hold_s", None)
+    if hold:
+        from umwelt.spec.roles import role_input_mode
+        slow: list[str] = []
+        for n in mspec.nodes:
+            params = {k: v for k, v in (n.params or {}).items()
+                      if isinstance(v, (tuple, list)) and v
+                      and isinstance(v[0], (int, float))}
+            modes = n.role_modes or {}
+            for role in (n.roles or ()):
+                if (modes.get(role) or role_input_mode(role)) != "dissipative":
+                    continue
+                g = params.get(f"gamma_diss_{role}", params.get("gamma_diss"))
+                if g is None:
+                    continue
+                gamma = float(g[0])
+                if gamma > 0 and gamma * float(hold) > 3.0:
+                    slow.append(f"{n.name}.{role} (gamma_diss {gamma:g}/s → belief "
+                                f"half-life {math.log(2) / gamma:.0f}s vs hold "
+                                f"{float(hold):g}s)")
+        if slow:
+            checks.append(CheckResult(
+                "gamma_vs_hold", True, warning=True, detail=(
+                    "beliefs will fully relax between batches (gamma × ingest_hold_s "
+                    "> 3): " + "; ".join(slow) + ". For session/report worlds "
+                    "consider slower gammas or observe-collapse bindings "
+                    "(force_observe=True + collapse_alpha as the reporter's honest "
+                    "η) — see docs/NEW_DOMAIN.md, 'Worlds of reports'.")))
+
+    if resolve_only:
+        return report
 
     # ── 3. topology_build ────────────────────────────────────────────────────────
     from umwelt.spec.build import build_graph_from_spec
@@ -369,11 +434,46 @@ def main(argv: "list[str] | None" = None) -> int:
                         help="emit the report as JSON instead of the summary")
     parser.add_argument("--allow-live-outputs", action="store_true",
                         help="waive the shadow law (outputs with shadow=False pass)")
+    parser.add_argument("--resolve-only", action="store_true",
+                        help="stop after resolve + schema_sanity (no engine boot) — "
+                             "the cheap front-door gate umweltd runs before spawning "
+                             "a worker")
+    parser.add_argument("--vocabulary", default=None, metavar="MODULE:FN",
+                        help="optional vocabulary ref, imported and CALLED before "
+                             "the spec resolves (mirrors worker boot order)")
     args = parser.parse_args(argv)
 
-    report = validate_spec(args.ref, require_shadow=not args.allow_live_outputs)
+    if args.vocabulary:
+        err = _call_vocabulary_ref(args.vocabulary)
+        if err:
+            report = ValidationReport(spec_name=args.ref, checks=[
+                CheckResult("vocabulary", False, err)])
+            print(json.dumps(report.to_dict(), indent=1) if args.json
+                  else report.summary())
+            return 1
+
+    report = validate_spec(args.ref, require_shadow=not args.allow_live_outputs,
+                           resolve_only=args.resolve_only)
     print(json.dumps(report.to_dict(), indent=1) if args.json else report.summary())
     return 0 if report.ok else 1
+
+
+def _call_vocabulary_ref(ref: str) -> str:
+    """Resolve and CALL a 'module:function' vocabulary ref exactly the way the
+    umweltd worker boots one. Returns "" on success, else the precise error text
+    (the front-door gate's 400 body)."""
+    module_name, _, attr = ref.partition(":")
+    if not module_name or not attr:
+        return (f"vocabulary ref {ref!r} must be 'module:function' — a bare module "
+                f"name gives the worker nothing to call (did you mean "
+                f"{module_name or ref}:register_vocabulary?)")
+    try:
+        import importlib
+        fn = getattr(importlib.import_module(module_name), attr)
+        fn()
+    except Exception as exc:
+        return f"vocabulary ref {ref!r} failed: {type(exc).__name__}: {exc}"
+    return ""
 
 
 if __name__ == "__main__":
