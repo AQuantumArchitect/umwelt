@@ -39,6 +39,14 @@ bind it as a driver (or even as ordinary bindings feeding a clock-like node) and
 becomes part of the world model — beliefs, couplings, forecasts and all. Deploy it
 only if you care about it.
 
+### Game hosts (optional face)
+
+The FL-core host API (`umwelt.host.GameHost`) advances **game cadence** with
+`step` / `step_turn` while the domain's tick still lives as a `DriverSpec` when
+declared (see the fog corridor: `period_s=60`, not solar). Sub-routine FF and
+surprise pause live in `umwelt.host.agency_loop.TimeContraction` — host control
+plane, not a second universe clock. Roadmap: [FLEDGELING_CORE.md](FLEDGELING_CORE.md).
+
 ## The rule
 
 - Solver knobs (`dt`, `dt_scale`, φ, Berry) never appear in a spec's world model.

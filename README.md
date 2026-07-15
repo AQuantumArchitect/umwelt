@@ -50,8 +50,10 @@ engine.save("engine_state.pkl")               # canonical, hash-stable, diffable
 ```
 
 This is the gate-pinned path: the same construction the proof suite drives. Starting
-your own domain? [docs/NEW_DOMAIN.md](docs/NEW_DOMAIN.md) is the checklist, and
-[examples/gridworld/](examples/gridworld) is a complete one to copy.
+your own domain? [docs/NEW_DOMAIN.md](docs/NEW_DOMAIN.md) is the checklist;
+[examples/gridworld/](examples/gridworld) is the classic template, and
+[examples/fledgeling_fog/](examples/fledgeling_fog) is the game-shaped fog corridor
+that drives the [Fledgeling core](docs/FLEDGELING_CORE.md) host face (`umwelt.host`).
 
 ## Why this exists, and what it's already measured
 
@@ -163,20 +165,27 @@ are in [docs/FIELD_NOTES.md](docs/FIELD_NOTES.md).
 
 ## What this is not
 
-- Not yet multi-domain in production: one domain (the home) is deployed; the adapters in
-  [examples/](examples/) are designed sketches with synthetic demos owed.
+- Not yet multi-domain in production: the origin home is the long-running deployment;
+  this repo also ships **public synthetic** domains (gridworld, fledgeling fog) and
+  sketches whose live product demos are still owed.
 - "Quantum" always means *classically simulated open-quantum-system dynamics* — and the
   ablations are mixed: the production estimator is a cumulant closure that beat the full
   density matrix on economics, and persistence baselines are genuinely hard to beat.
+  The **game-facing host API** (`umwelt.host`) exports calibrated value + confidence only.
 - A 0.x API. The origin deployment remains the source of truth until it imports this
   library and its full gate stays green — that back-port is the 1.0 trigger.
 - Not an ML framework, not an LLM, not a drop-in Kalman replacement.
+- Not the full [Fledgeling](http://www.peripheralarbor.com/fledgeling/) game — see
+  [docs/FLEDGELING_CORE.md](docs/FLEDGELING_CORE.md) for the FL-core path (Phases 1–5
+  in this monorepo; host-repo integration still open).
 
 ## Where this is going
 
 | Domain | Why this engine | Status |
 |---|---|---|
 | [Gridworld bot](examples/gridworld/) | Fog-of-war IS weak measurement; scouting buys η | Proof-gate domain (runs in CI) |
+| [Fledgeling fog corridor](examples/fledgeling_fog/) | Game-shaped places + scout η; host API + multi-mind + agency demos | FL-core Phases 1–4 (CI synthetic) |
+| [FL facet kits](src/umwelt/kits/) | Optional fog / attention / market / dream baselines | Phase 5 kits (CI synthetic) |
 | [Resilience recommender](examples/resilience-recommender/) | The recommender feedback loop is the 10.8× trap | Sketch |
 | [Butler](examples/butler/) | LLM parses at their honest η; non-training as privacy | Sketch |
 | [Sentiment ↔ market](examples/sentiment-market/) | Trust-web fusion; ships its own baselines | Sketch |

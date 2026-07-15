@@ -1,6 +1,7 @@
 # Kit: attention (Warmth-lite)
 
-**Honesty tier:** synthetic CI — two sources, one corrupted.
+**Honesty tier:** synthetic CI — two sources, one corrupted.  
+**Roadmap:** [docs/FLEDGELING_CORE.md](../../../docs/FLEDGELING_CORE.md) Phase 5.
 
 Two channels into one `signal` role. The corrupted source has low η; a naive
 full-confidence merge is the baseline to beat via isolation / low-η weighting.

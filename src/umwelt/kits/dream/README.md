@@ -1,6 +1,7 @@
 # Kit: dream
 
-**Honesty tier:** synthetic CI — counterfactual cassette, zero live dispatch.
+**Honesty tier:** synthetic CI — counterfactual cassette, zero live dispatch.  
+**Roadmap:** [docs/FLEDGELING_CORE.md](../../../docs/FLEDGELING_CORE.md) Phase 5.
 
 Replay a mutated scout stream on a **clone** host. Intents stay shadow. The live
 field hash must not change; live dispatches must stay zero.

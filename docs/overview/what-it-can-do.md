@@ -71,7 +71,16 @@ No GPU, no heavyweight infrastructure. The reference deployment this was extract
 from ran for a year and a half on a $100 single-board computer. The current service
 layer is a small local process you can run directly or in a single Docker container.
 
-## 7. Show its work, honestly
+## 7. Host a game-shaped belief loop (library-first)
+
+Beyond home-style sensors, the library ships a thin **host API** and a public
+**fog corridor** example: places on a graph, scouting as partial observation,
+shadow decisions, multi-agent private minds, and earned sub-routine automation —
+all gated on synthetic data in CI. This is the “Fledgeling core” path: belief and
+agency contracts for a host game, not the game itself. Technical roadmap:
+[docs/FLEDGELING_CORE.md](../FLEDGELING_CORE.md).
+
+## 8. Show its work, honestly
 
 Every capability above is backed by a public, tiered evidence ledger: proven and
 automatically re-checked on every code change, proven once on independent real data,
