@@ -37,6 +37,27 @@ is the last committed observation and the *forecast confidence* is the
 decayed radius, with γ set (or learned) to the measured calibration
 timescale.
 
+## The taxonomy, first measurement in this repo's own gate (2026-07-14)
+
+`proofs/gamma_walk.py` now walks the dissociation on the deterministic gridworld
+day, both signal classes, every gate run. Accumulators (resource levels) replicate
+the fleet verdict wholesale: **value-γ\* = 0** — persistence wins the value model
+and every γ > 0 loses — while on a sparse irregular wire the calibration score
+peaks at an interior **γ\* = 3e-4 /s** (corr +0.302 vs +0.223 at γ=0): decay
+earning its keep as uncertainty only. Two refinements the synthetic stream forced:
+(1) under a **constant** cadence the Pearson calibration score is γ-invariant
+(staleness becomes an affine transform of |last value|) — identifying a
+calibration timescale *requires gap variance*, so a regular feed has no γ\* to
+find; (2) γ\* tracks the feed's gap scale (~2000 s gaps → 3e-4 /s, vs the fleet's
+minutes-scale gaps → 3e-3–1e-2 /s) — the calibration timescale is a property of
+the cadence, not a universal constant. And the open event-class question closed,
+at least on this stream: **±1 sightings accept the OU prior that accumulators
+reject** — value-γ\* = 1e-4 /s beats persistence (0.520 vs 0.532 RMSE; modest,
+but the *sign* completes the taxonomy), with event calibration positive but weak
+(≤ +0.03; that wire narrates transitions immediately, so staleness carries little
+flip information). Accumulator ≠ event is now a measured split, pinned in the
+gate.
+
 ## What's owed
 
 - E2 (live): decay-variant world specs A/B'd on live LLM runners — success
@@ -48,7 +69,9 @@ timescale.
 - The event/regime signal classes (±1 outcomes, occupancy) were NOT in this
   tape — the OU prior may be exactly right there. The taxonomy
   (accumulator vs event vs regime → which decay semantic) is the open
-  design question this note exists to seed.
+  design question this note exists to seed. *(The event half now has a first
+  in-gate answer — the section above; a real foreign ±1 tape and the regime
+  class stay owed.)*
 
 If this note and [CLAIMS.md](../CLAIMS.md) ever disagree, the ledger wins —
 no ledger row is claimed here; this is cross-repo evidence with the data and
