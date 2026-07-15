@@ -45,6 +45,7 @@ python_files = [
     "fidelity_harness.py",
     "ladder_walk.py",
     "deconfound_smoke.py",
+    "fledgeling_fog_blank.py",
 ]
 markers = [
     "slow: long-running evidence harness (still runs in the default gate)",

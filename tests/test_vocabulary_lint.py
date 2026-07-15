@@ -41,13 +41,18 @@ ALLOW: dict[str, set[str]] = {
     # SensorBridge.register(zone=…) with no membrane guard (same origin-seam rationale
     # as ingress.py).
     "spec/validate.py": {"zone"},
+    # kits: BindingSpec.zone kwarg (origin seam field name) in declarative specs
+    "kits/fog/cassette.py": {"zone"},
+    "kits/attention/cassette.py": {"zone"},
+    "kits/market/cassette.py": {"zone"},
+    "kits/dream/cassette.py": {"zone"},
 }
 
 
 def test_engine_source_is_domain_free():
     leaks: list[str] = []
     for path in sorted(SRC.rglob("*.py")):
-        rel = str(path.relative_to(SRC))
+        rel = path.relative_to(SRC).as_posix()
         allowed = {w.lower() for w in ALLOW.get(rel, set())}
         for lineno, line in enumerate(path.read_text().splitlines(), 1):
             for m in BANNED.finditer(line):

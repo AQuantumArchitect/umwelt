@@ -10,8 +10,9 @@ value with a confidence attached. So there is ONE fusion operator for all three 
 - **forecast ensembling** — model predictions fuse with live readings at their own η;
 - **engine chaining** — an upstream engine's beliefs enter downstream as one more leaf.
 
-That operator is the **trust web** (`umwelt.foresight.trust_web`, qubit-backed variant in
-`qubit_trust_web`): one learned per-leaf fuser, prior-initialized so day-1 behavior is
+That operator is the **trust web** (`umwelt.foresight.trust_web`; optional denser
+variant in `qubit_trust_web`): one learned per-leaf fuser, prior-initialized so day-1
+behavior is
 provably the confidence-weighted average — turning it on changes nothing until it has
 evidence to learn from. Opt-in at the ingress membrane (`UMWELT_TRUST_WEB`); webs-off is
 byte-equivalent to last-wins.

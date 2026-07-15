@@ -73,3 +73,46 @@ def confounded_now(graph, actuated_roles: dict[str, set[str]]) -> dict[str, set[
         if hit:
             out[cluster] = hit
     return out
+
+
+# ── Actor-keyed confounding (FL-core Phase 3) ─────────────────────────────────
+# Extends the graph-derived surface with WHO acted. The static surface stays the
+# graph law; actor tags make multi-mind hygiene possible without replacing it.
+
+_ACTOR_INTENT_LOG_ATTR = "_actor_intent_log"
+
+
+def record_actor_intent(engine, actor_id: str, intent_name: str, t=None) -> None:
+    """Append (actor_id, intent_name, t) onto the engine for multi-actor hygiene."""
+    log = getattr(engine, _ACTOR_INTENT_LOG_ATTR, None)
+    if log is None:
+        log = []
+        setattr(engine, _ACTOR_INTENT_LOG_ATTR, log)
+    log.append((str(actor_id), str(intent_name), t))
+    # Bound memory
+    if len(log) > 512:
+        del log[:-256]
+
+
+def actor_intent_log(engine) -> list:
+    return list(getattr(engine, _ACTOR_INTENT_LOG_ATTR, []) or [])
+
+
+def actor_confounded_now(
+    graph,
+    actuated_roles: dict[str, set[str]],
+    *,
+    actor_id: str | None = None,
+    actor_actuated: dict[str, dict[str, set[str]]] | None = None,
+) -> dict[str, set[str]]:
+    """Graph surface ∩ recent actuation, optionally restricted to one actor.
+
+    `actor_actuated` maps actor_id → {cluster: {roles}} for multi-mind. When
+    actor_id is set and actor_actuated is provided, only that actor's recent
+    actuations count. When actor_id is None, falls back to confounded_now
+    (graph-only, single-mind compatible).
+    """
+    if actor_id is not None and actor_actuated is not None:
+        roles = actor_actuated.get(actor_id, {})
+        return confounded_now(graph, roles)
+    return confounded_now(graph, actuated_roles)
