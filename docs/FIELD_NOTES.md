@@ -61,14 +61,14 @@ the state nothing reports?* If the answer is "silence," the role is dissipative.
 ## 2. Place is provenance, not radius
 
 The one engine bug real data found (fixed in `53fe99a`): the gauge projection minted a
-place token whenever the anchor qubit's Bloch radius crossed a threshold. Thirteen
+place token whenever the anchor belief's purity/radius crossed a threshold. Thirteen
 days of real field dynamics drifted an **ungrounded** anchor past that gate — the run
 ended with a geohash for a location that was never given. The 1-day synthetic proof
 never drifts that far, so the gate was structurally blind to it.
 
 The rule the fix encodes: **a coordinate may only be named from evidence, never from
 state geometry.** Grounding is provenance; radius is just where the dynamics happen to
-have pushed a qubit. Pinned forever by `tests/test_gauge_place_provenance.py`.
+have pushed the anchor. Pinned forever by `tests/test_gauge_place_provenance.py`.
 
 The general form: any projection that turns internal state into an external *claim*
 (a place, an identity, a label) must check where that state came from, not what it

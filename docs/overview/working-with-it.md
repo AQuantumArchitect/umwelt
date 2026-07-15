@@ -32,8 +32,9 @@ of your own, the shape of the work is:
    small standalone service (`umweltd`) your application talks to over a plain HTTP
    API — post readings in, read back live beliefs, forecasts, and recommendations.
    For a **game- or host-facing** embed, prefer the thin `GameHost` face
-   (`umwelt.host`: observe / intend / beliefs / step) so the host never needs Bloch
-   vocabulary; see [FLEDGELING_CORE.md](../FLEDGELING_CORE.md) and
+   (`umwelt.host`: observe / intend / beliefs / step) so the host only sees calibrated
+   values and confidence, not substrate internals; see
+   [FLEDGELING_CORE.md](../FLEDGELING_CORE.md) and
    [examples/fledgeling_fog/](../../examples/fledgeling_fog).
 3. **Start in shadow mode.** Watch it decide before it's ever allowed to act on
    anything; promote individual decisions to "live" once you trust them.

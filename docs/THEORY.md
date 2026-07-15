@@ -1,13 +1,14 @@
 # THEORY — the estimator ladder, and what each rung measurably buys
 
-*Adapted from the origin deployment's estimator-ladder document (meerkat
-`docs/QUANTUM_KALMAN.md`). The origin question: "if we have a classical Kalman and a
-phasor Kalman, why not take the next step and build a quantum (Bloch-sphere) Kalman?"
-Answer: yes — it's a named object in filtering theory (the Belavkin filter),
-`observe_qubit` was already its ad-hoc approximation, and the dropped terms were
-confessable. It was built (`umwelt/substrate/belavkin.py`), then walked rung-by-rung on
-the origin deployment's real data — the verdict is §5, and it is a **negative result
-that ships as such**.*
+*Internal technical note (not a product brief).* Adapted from the origin deployment's
+estimator-ladder document (meerkat `docs/QUANTUM_KALMAN.md`). The origin question was
+engineering, not branding: if we already have a classical Kalman and a phasor Kalman,
+is there a principled next rung on the Bloch ball (the Belavkin filter of quantum
+filtering theory)? That filter is a named object in the literature;
+`observe_qubit` was already an ad-hoc approximation of it. It was built
+(`umwelt/substrate/belavkin.py`), walked rung-by-rung on the origin's real data —
+verdict in §5 — and is a **negative product result that ships as such** (default OFF).
+Classically simulated; no quantum hardware is involved or claimed.
 
 If this document and [CLAIMS.md](../CLAIMS.md) ever disagree, the ledger wins.
 
@@ -26,25 +27,25 @@ L2  phasor Kalman      + rotation: phase/rhythm as 2-vector state
 L3  Wonham filter      + boundedness: exact nonlinear filter for a
                          two-state jump process observed in noise
 L4  qubit Belavkin     + coherence: L3 and L2 unified on the Bloch
-    (cumulant order 2)   ball, with measurement back-action          ← "the quantum Kalman"
+    (cumulant order 2)   ball, with measurement back-action          ← Belavkin / SME filter
 L5  full-ρ Belavkin    + multipartite coherence                     (2ⁿ — do not build)
 ```
 
-The claim worth internalizing: **L4 is not "quantum instead of Kalman." L4 *contains*
-L2 and L3 as limits.** Set coherences to zero and the qubit filter's z-equation *is*
+**L4 is not a product rebrand of Kalman as "quantum."** It is a containment rung: L4
+*contains* L2 and L3 as limits. Set coherences to zero and the filter's z-equation *is*
 the Wonham filter; linearize away the boundedness and it's the phasor Kalman; freeze
-the gain and it's the α-blend. Building L4 doesn't abandon the classical upside — it
-makes every classical special case reachable by turning physical dials (measurement
-strength, efficiency, Hamiltonian) to zero. The ablation becomes: *walk the ladder on
-replayed data and measure what each rung buys.* That walk has been taken (§5), and the
-walking machinery lives on in this repo (`proofs/ladder_walk.py`).
+the gain and it's the α-blend. Building L4 does not abandon the classical upside — it
+makes every classical special case reachable by turning dials (measurement strength,
+efficiency, Hamiltonian) to zero. The ablation is: *walk the ladder on replayed data
+and measure what each rung buys.* That walk has been taken (§5); the machinery lives
+in this repo (`proofs/ladder_walk.py`). **What ships by default is L0**, not L4.
 
-## 2. What the "full quantum Kalman" concretely is
+## 2. What the Belavkin / SME filter concretely is
 
-Quantum filtering (Belavkin 1992; Wiseman & Milburn 2009) gives the exact belief-update
-for a quantum system under continuous weak measurement. For a sensor weakly measuring
-observable L (say σ_z of a binary-state qubit) with strength k and **efficiency
-η ∈ [0,1]**, the measurement record is
+Quantum filtering theory (Belavkin 1992; Wiseman & Milburn 2009) gives the exact
+belief-update for a system under continuous weak measurement in that formalism. For a
+sensor weakly measuring observable L (say σ_z of a binary-state qubit) with strength k
+and **efficiency η ∈ [0,1]**, the measurement record is
 
     dy = ⟨L + L†⟩ dt + dW / √(4kη)
 
@@ -70,24 +71,23 @@ Three things to notice, because they are the entire payoff:
    process*, which is what a binary world-state (occupied/vacant, on/off) literally
    is. A linear Kalman never gives you this; you clamp and hand-tune instead. A
    hand-set collapse alpha is a crude constant standing in for exactly this term.
-2. **Confidence = measurement efficiency η, natively.** η = 0 → the innovation term
-   vanishes → the belief free-evolves. **The confidence contract's provable no-op is a
-   theorem of the formalism**, not a convention imposed on it: a confidence-0
-   observation cannot move the belief, because it is a detector that detected nothing.
-   `0 < η < 1` half-commits. The engine's confidence contract turns out to be the
-   standard quantum-filtering efficiency parameter — the strongest theoretical
-   grounding the library's central rule could ask for.
+2. **Confidence as efficiency η.** η = 0 → the innovation term vanishes → the belief
+   free-evolves. In this formalism the no-op is a theorem, not a bolted-on guard: a
+   confidence-0 observation is a detector that detected nothing. `0 < η < 1`
+   half-commits. The library's everyday confidence contract is *compatible with* that
+   reading; the default α-blend path also enforces η=0 as a no-op without requiring
+   the full SME update.
 3. **Back-action is explicit and tunable.** The deterministic `−2k·x` term says:
-   measuring z at strength k destroys phase coherence at rate 2k. "The harder you pin
-   *where the state is*, the faster you forget *where it is in its rhythm*" becomes a
-   physical trade-off with one knob, rather than an emergent accident.
+   measuring z at strength k destroys phase coherence at rate 2k — a single knob for
+   the trade-off between pinning a coordinate and retaining rhythm/coherence.
 
 **At cumulant order 2** — the closure this library ships (`substrate/
 cumulant_cluster.py`) — the SME becomes coupled equations on (e₁, e₂): means, phases,
-and covariance blocks, with the innovation feeding all of them. That is "the quantum
-Kalman": **the Belavkin filter closed at second cumulants.** Same state the
-CumulantCluster already carries; what changes is the *update rule* — principled
-state-dependent gain + innovation term instead of the hand-set α-blend.
+and covariance blocks, with the innovation feeding all of them. That is the Belavkin
+filter closed at second cumulants — sometimes nicknamed a "quantum Kalman" in the
+filtering literature. Same state the CumulantCluster already carries; what changes is
+the *update rule* — principled state-dependent gain + innovation instead of the
+hand-set α-blend.
 
 ## 3. How it lands in this library
 
@@ -153,9 +153,9 @@ the train split, held-out last 30%:
 1. **The origin's world was persistence-dominated** — persistence 0.1346 ≈ α-blend
    0.1349 ≪ Belavkin 0.3034 overall. Nothing beat hold-the-last-report, the α-blend
    tied it, and **the full Belavkin filter was DENIED by its own experiment — it ships
-   default-OFF** (`UMWELT_BELAVKIN=0`). The theory value stands — the confidence
-   contract is a theorem with a reference implementation — but the estimator that
-   ships is the one the data picked.
+   default-OFF** (`UMWELT_BELAVKIN=0`). The formalism still clarifies the η contract
+   and keeps a reference implementation; the estimator that ships is the one the data
+   picked (L0).
 2. **Cross-node structure earns at transitions** (−11.5% for the coupled blend) at the
    cost of steady-state cross-talk when J is hand-set → couplings should stay
    **learned-from-zero**, growing only where they pay. The regime, not the law,

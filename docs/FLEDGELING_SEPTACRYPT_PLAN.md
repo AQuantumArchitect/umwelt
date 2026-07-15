@@ -6,6 +6,13 @@
 **Primary demonstration:** *Nested Reactor / Missing Valve Event*  
 **Target audience:** a coding-agent team working across Fledgeling, umwelt, SpaceWheat, and Universal Architect
 
+This document is a **cross-repo research map**, not umwelt product marketing.
+Where it uses open-system / density-matrix language, that is mostly SpaceWheat's
+native sim vocabulary or a proposed chart mapping — not a claim that umwelt is a
+quantum product or that solid geometry *is* a quantum state (see §3 honesty bounds).
+For what umwelt actually ships and gates, see [CLAIMS.md](../CLAIMS.md) and
+[FLEDGELING_CORE.md](FLEDGELING_CORE.md).
+
 ---
 
 ## 0. North star
@@ -13,7 +20,7 @@
 Build a game-runtime substrate in which:
 
 - a world is recursively constructed from composable constraints;
-- local systems evolve as weighted quantum-dynamical graphs;
+- local systems evolve as weighted dynamical graphs (SpaceWheat: open-system steppers where that game already does so);
 - each observer holds a private, uncertainty-aware model of the shared world;
 - history is a tamper-evident branching path through state space;
 - authors and players may insert events nonchronologically only when a valid evolution can connect the surrounding states;
@@ -34,8 +41,8 @@ The prior architecture contained six functional components. **Spirit Cube is the
 | # | Component | Governing question | Responsibility | Existing source |
 |---|---|---|---|---|
 | 1 | **Universal Architect** | What can exist or be made consistent? | Recursive composition, resource/affordance closure, abductive support generation | `dudecon/Universal-Architect` |
-| 2 | **SpaceWheat manifold** | How does it evolve? | Local quantum-dynamical systems, coupled loops, weighted graph physics | `AQuantumArchitect/SpaceWheat` |
-| 3 | **umwelt** | What does this observer believe? | Partial observation, confidence, trust, forecasting, self-action hygiene, private cognifolds | `AQuantumArchitect/umwelt` |
+| 2 | **SpaceWheat manifold** | How does it evolve? | Local open-system / manifold dynamics, coupled loops, weighted graph physics | `AQuantumArchitect/SpaceWheat` |
+| 3 | **umwelt** | What does this observer believe? | Partial observation, confidence, trust, forecasting, self-action hygiene, private belief fields | `AQuantumArchitect/umwelt` |
 | 4 | **Berry Tape** | Where are we in the process? | Kaironic indexing, phase accumulation, return/loop detection, working-memory stamps | existing umwelt machinery |
 | 5 | **Knot Ledger** | What path has been witnessed or proposed? | Durable event provenance, branch DAG, transition certificates, replay, nonlinear insertion | new sibling layer |
 | 6 | **Fledgeling** | How does a player perceive and intervene? | SI agency, attention, subroutines, story interaction, rendering and game loop | `dudecon/Fledgeling_HTML` + design site |

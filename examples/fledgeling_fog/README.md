@@ -52,7 +52,7 @@ python examples/fledgeling_fog/agency_demo.py
 
 - Narrative, dialogue, or content generation
 - Live Fledgeling host integration / playable product loop (Phase 6)
-- That full open-quantum filtering beats classical blend (estimator ladder is separate)
+- That the optional Belavkin filter beats classical blend (it ships OFF; see THEORY.md)
 - Any origin-deployment effect sizes
 - That facet kits improve real play skill (synthetic cassette metrics only)
 

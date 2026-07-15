@@ -40,7 +40,7 @@ Worker (behind the proxy):
 | `/health` | GET | `{world, step, last_event_ts, seed_profile, events_db_bytes, snapshot_bytes}` |
 | `/events` | POST | `{"events":[[ts,sid,value,meta|null],...]}` → append + ingest |
 | `/state` | GET | the canonical `graph_state` projection |
-| `/beliefs?node=&role=` | GET | one raw-Bloch belief read |
+| `/beliefs?node=&role=` | GET | one raw substrate belief read (debug; prefer host face for games) |
 | `/recommendations` | GET | the shadow layer |
 | `/snapshot` | POST | save + cursor → `{"field_canon_hash"}` |
 

@@ -10,7 +10,8 @@ A `DomainSpec` (`umwelt.spec.schema`) is a frozen manifest of five things:
 
 ### 1. Nodes — the topology
 A parent-referenced tree of `NodeSpec`s. Exactly one root (`parent=None`). Each node
-declares its `roles` (the qubit axes it holds beliefs on), a `kind`
+declares its `roles` (the belief axes it tracks; implemented as substrate roles in the
+field), a `kind`
 (`root | region | environment | clock | anchor | signal | actuator | entity | component | synthetic`
 — domain dialects like `zone`/`sensor`/`person` are accepted as aliases), optional
 `role_modes` (`{role: "unitary" | "dissipative"}` — event-kicked vs continuously-driven;
@@ -34,10 +35,10 @@ tendril edge (region → actuator).
 ever arrive, each with a DECLARATIVE normalizer (`"binary"`,
 `{"type": "regime", "center": 21, "width": 4}`, …) resolving through the registry in
 `umwelt.spec.normalizers`; register domain idioms with `register_normalizer`. The
-measurement model is explicit: `strength` (k) and `efficiency` (η) declare a weak
-measurement; `collapse_alpha` is the folded legacy form. Signals that arrive but are
-DELIBERATELY unbound go in `ignored` with a reason — the ingest gap should read
-"0 actionable, N explained", never a mystery.
+measurement model is explicit: `strength` (k) and `efficiency` (η) scale how hard a
+reading pulls the belief (`collapse_alpha` is the folded legacy form). Signals that
+arrive but are DELIBERATELY unbound go in `ignored` with a reason — the ingest gap
+should read "0 actionable, N explained", never a mystery.
 
 ### 4. Outputs — the decisions
 `OutputSpec(name, node, role, kind, decode, codomain, gates, coupling, readback_sensor,
@@ -53,9 +54,9 @@ move the learned rise/fall geometry.
 
 ### 5. Drivers — the time
 `DriverSpec(name, node, role, type, period_s, rest_window)` — the domain's clock(s). The
-engine anchors the named qubit toward the driver's phase each tick; the phase is fixed
-physics, its comprehension is learned. `"harmonic"` is built in; register an ephemeris,
-an exchange session calendar, or a game tick with `register_driver`
+engine anchors the named node/role toward the driver's phase each tick; the phase is
+fixed schedule physics, its comprehension is learned. `"harmonic"` is built in; register
+an ephemeris, an exchange session calendar, or a game tick with `register_driver`
 (`umwelt.clocks.drivers`). Anchor nodes you don't declare are materialized at boot.
 
 ## Booting it

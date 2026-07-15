@@ -44,7 +44,7 @@ that core. It is not a candidate for the whole of Fledgeling.
 | Shadow-first decisions (tendrils) | `membranes/egress` | PINNED |
 | Trust-web fusion (day-1 parity; isolation when referee exists) | `foresight/trust_web` | Mechanism PINNED; live skill OWED |
 | Local daemon + client + playground | `umweltd` | PINNED parity |
-| Gridworld fog-of-war (weak measurement) | `examples/gridworld` | PINNED |
+| Gridworld fog-of-war (partial observation + η) | `examples/gridworld` | PINNED |
 | **Fog corridor (FL Phase 1 domain)** | `examples/fledgeling_fog` | PINNED (synthetic) |
 | **Host API game face (Phase 2)** | `umwelt.host` (`GameHost`) | PINNED (contract tests) |
 | **Multi-mind session (Phase 3)** | `umwelt.host.WorldSession` | PINNED (privacy suite) |
@@ -57,7 +57,7 @@ that core. It is not a candidate for the whole of Fledgeling.
 - ~18 months live home deployment (meerkat)
 - De-confound A/B (10.8× → ~79% bias cut)
 - First foreign Home Assistant replay (AUCs vs persistence; dissipative-role law)
-- Estimator ladder: full Belavkin **denied** as default; α-blend / persistence hard to beat
+- Estimator ladder: full Belavkin filter **denied** as default; α-blend / persistence hard to beat
 
 These inform design. They are **not** re-claimed as Fledgeling evidence.
 
@@ -83,7 +83,7 @@ actions / recs   ←  shadow tendrils ←──── self-tagging + actor_id ec
 ```
 
 Time for FL demos is **tick / turn** via `DriverSpec` + host `step` / `step_turn`
-(not solar). Topology remains a **declared tree + bridges**. Internal qubits stay
+(not solar). Topology remains a **declared tree + bridges**. Substrate internals stay
 invisible at the host boundary (`Belief.value` + `Belief.confidence`).
 
 ---
@@ -142,7 +142,7 @@ Time                drivers + ingest_hold            + tick driver + step / step
 Agents              one engine ≈ one mind            + WorldSession (N engines, masks)
 API surface         DomainSpec + engine.ingest       + GameHost plain face
 Evidence            home + gridworld + private HA    + public fledgeling fixtures in CI
-Language            Bloch / η / tendril internal     + Belief(value, confidence) at boundary
+Language            substrate internals optional     + Belief(value, confidence) at boundary
 ```
 
 | Gap | Severity | Status |
@@ -151,7 +151,7 @@ Language            Bloch / η / tendril internal     + Belief(value, confidence
 | Shared world, private beliefs | High | **Addressed** — classical `GroundState` + per-mind fields + channel masks |
 | Actor identity on actions | High | **Addressed** — `record_actor_intent` / actor-keyed confounded_now (extends graph surface) |
 | Game clock / turn membrane | High | **Addressed** — tick `DriverSpec` + host `step` / `step_turn`; agency FF/surprise |
-| Quantum metaphor at game API | Medium | **Addressed** — default beliefs face hides Bloch |
+| Substrate jargon at game API | Medium | **Addressed** — default beliefs face is value + confidence only |
 | Multi-engine cost | Medium | **Measured** — N=8 / N=32 probe on `WorldSession.measure_cost` (partition design not required yet) |
 | Procedural topology mutation | Medium | Still experimental / product-owned |
 | Abstraction / LOD of belief | Medium | Deferred (`scale` kit unscheduled) |
@@ -167,7 +167,7 @@ Language            Bloch / η / tendril internal     + Belief(value, confidence
 2. **Public synthetic fixtures or it didn’t happen.** Fledgeling gates run offline in CI with no private meerkat/HA data.
 3. **Beat a dumb baseline.** Persistence, last-wins, and “always believe the player’s last act” are the control arms. Report honest losses too.
 4. **Library-first.** `umweltd`/forge are optional hosts; the game embeds the library.
-5. **Plain face, rich guts.** External types: `Belief`, `Intent`, `Observation`, `Decision`. Internal qubits optional and invisible.
+5. **Plain face, rich guts.** External types: `Belief`, `Intent`, `Observation`, `Decision`. Substrate coordinates stay optional and off the host face.
 6. **One facet spike before generalization.** Fog Corridor first; kits after.
 7. **Ledger every promotion.** New FL claims get [CLAIMS.md](../CLAIMS.md) rows with the same DENIED discipline.
 
@@ -237,7 +237,7 @@ GameHost  (umwelt.host)
 | Thin host package | `src/umwelt/host/` (`api.py`, `session.py`, `agency_loop.py`) |
 | Intent → tendril / shadow | `GameHost.intend` |
 | Observation → binding + η | `observe` / `observe_many` (η≤0 no-op) |
-| Hide Bloch in default face | `Belief.value = (z+1)/2`, `confidence = \|r\|` |
+| Hide substrate vectors in default face | `Belief.value` + `Belief.confidence` only |
 | Turn cadence | `step` / `step_turn` |
 
 **Exit gate:**
@@ -323,7 +323,7 @@ Optional modules under `src/umwelt/kits/` — specs + baselines + README honesty
 | Host adapter in Fledgeling tree | Game owns content; core owns belief contracts |
 | Optional umweltd for tools / editors | Not required in the player binary |
 | Shared CLAIMS or dual ledger | Keep DENIED culture across repos |
-| Drop or quarantine quantum names at the host boundary | Host face already plain; internal modules keep substrate names |
+| Keep host-boundary language plain | Host face already plain; THEORY/substrate modules may keep formal names |
 
 **Exit gate:**
 
@@ -368,7 +368,7 @@ paper over).
 
 | Risk | Mitigation / note |
 |---|---|
-| Quantum rhetoric blocks adoption | Plain host API shipped; THEORY stays internal |
+| Substrate jargon on the product face | Plain host API shipped; THEORY is internal technical reading |
 | House-shaped APIs leak | Vocabulary lint + fledgeling example as counterexample |
 | Multi-engine cost | Measured N=8/N=32; watch if product needs dozens of rich fields |
 | Scope creep into Uplift/retro-sim | Hard non-goals (§3.2); `scale` unscheduled |
@@ -421,7 +421,7 @@ python -m pytest proofs/fledgeling_fog_blank.py tests/test_host_api.py \
 | 2026-07 | First spike = Fog Corridor | Shipped `examples/fledgeling_fog` |
 | 2026-07 | Host package name | `umwelt.host` (not `umwelt.fledgeling`) |
 | 2026-07 | Multi-mind design | **N engines** per mind + channel masks; cost measured; partition deferred |
-| 2026-07 | Quantum names at boundary | **Hide** — calibrated value + confidence only on default face |
+| 2026-07 | Names at host boundary | **Hide substrate vectors** — calibrated value + confidence only on default face |
 | 2026-07 | Auto-intend threshold | Shadow auto-intend only after `PromotionGate.min_successes` (not after 1 success); live requires explicit `promote()` |
 
 ---
@@ -438,8 +438,8 @@ NEXT    Phase 6: real Fledgeling host dependency; playable loop where FL-core of
 
 LATER   scale / LOD research (only if Uplift asks); richer facet content in game tree.
 
-NEVER   (as this core) Full Fledgeling game, voxels, narrative AGI, unearned
-        quantum mystique as a product feature.
+NEVER   (as this core) Full Fledgeling game, voxels, narrative AGI, or
+        unearned physics branding as a product feature.
 
 GATE    If it isn't in CI on synthetic Fledgeling-shaped data, it isn't FL-core yet.
         Phases 1–5 meet that bar in this monorepo; product integration does not yet.

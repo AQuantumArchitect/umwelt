@@ -12,11 +12,11 @@ on.
 python3 examples/gridworld/demo.py     # boot blank, replay a synthetic day, watch belief ease
 ```
 
-Fog-of-war is *literally* weak measurement here: seeing a cell is an observation at
-the scout's confidence; scouting is buying η; unobserved cells' beliefs decohere back
-toward the prior instead of freezing at the last sighting. The demo prints the belief
-field as a per-cell heatmap at checkpoints: watch the occupied cell's belief rise on a
-sighting and *ease* — not snap — back toward uncertainty as the agent moves on.
+Fog-of-war is partial observation with confidence: seeing a cell is an observation at
+the scout's η; scouting buys reliability; unobserved cells' beliefs *ease* back toward
+uncertainty instead of freezing at the last sighting. The demo prints the belief field
+as a per-cell heatmap at checkpoints: watch the occupied cell's belief rise on a
+sighting and ease — not snap — as the agent moves on.
 
 ## What's here, and what to copy
 
@@ -33,7 +33,6 @@ sighting and *ease* — not snap — back toward uncertainty as the agent moves 
   domain's proof; `proofs/` isn't shipped in the installed package, so vendor the
   harness the way `umwelt-market` did.
 
-Owed here (see CLAIMS.md): the Berry-phase decision demo — looping around a region vs
-scouting out-and-back leave different geometric phase (the topology is test-pinned in
-`tests/test_berry_geometric`-lineage tests; the *decision authority* demo is the open
-gate), and the capture-the-flag bot built on OutputSpec tendrils.
+Owed here (see CLAIMS.md): a path-topology decision demo on this domain (looping vs
+out-and-back geometric phase is test-pinned elsewhere; live decision authority still
+owed), and the capture-the-flag bot built on OutputSpec tendrils.

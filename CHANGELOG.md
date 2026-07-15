@@ -9,7 +9,7 @@ if the two ever disagree, CLAIMS.md wins.
 ### Fledgeling core (FL-core Phases 1–5)
 - **Host API** (`umwelt.host`): thin game face — `GameHost.register_world` /
   `observe` / `intend` / `beliefs` / `step` / `step_turn`; calibrated
-  `Belief(value, confidence)` without Bloch on the default face; η=0 no-op;
+  `Belief(value, confidence)` on the default face (no substrate vectors); η=0 no-op;
   shadow intents leave no live world side effects (`tests/test_host_api.py`).
 - **Multi-mind** (`WorldSession`): shared classical ground + N private engines,
   per-observer channel masks, actor-keyed intent logging on the confounding
