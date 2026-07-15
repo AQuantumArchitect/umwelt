@@ -1,52 +1,107 @@
 # /plan — Fledgeling Septacrypt / Endless Knot Runtime
 
 **Status:** implementation plan, not a capability claim  
-**Revision:** 2 — incorporates Paul Spooner's 3→7→12 Septacrypt source text  
+**Revision:** 3 — integration status after umwelt FL-core 1–5; vision aligned to [dudecon X source](https://x.com/dudecon/status/2026401325706260491)  
 **Working name:** `septacrypt-core`  
 **Primary demonstration:** *Nested Reactor / Missing Valve Event*  
 **Target audience:** a coding-agent team working across Fledgeling, umwelt, SpaceWheat, and Universal Architect
 
-This document is a **cross-repo research map**, not umwelt product marketing.
-Where it uses open-system / density-matrix language, that is mostly SpaceWheat's
-native sim vocabulary or a proposed chart mapping — not a claim that umwelt is a
-quantum product or that solid geometry *is* a quantum state (see §3 honesty bounds).
-For what umwelt actually ships and gates, see [CLAIMS.md](../CLAIMS.md) and
-[FLEDGELING_CORE.md](FLEDGELING_CORE.md).
+This document is a **cross-repo research map and integration plan**, not umwelt
+product marketing and not a claim that the runtime is finished.
+
+- Open-system / density-matrix language here is mostly SpaceWheat’s native sim
+  vocabulary or a **combinatorial chart** proposal — not a claim that umwelt is a
+  “quantum product,” or that a die solid *is* a full quantum state (see §3).
+- Theological / symbolic language (1→2→3→7→12) is a **declared design frame**
+  from Paul’s source post, not an empirical physics claim and not a morality
+  oracle for agents.
+- What umwelt **ships and gates today** lives in [CLAIMS.md](../CLAIMS.md) and
+  [FLEDGELING_CORE.md](FLEDGELING_CORE.md). Septacrypt claims, when they exist,
+  belong in a sibling `CLAIMS_SEPTACRYPT.md`.
 
 ---
 
 ## 0. North star
 
-Build a game-runtime substrate in which:
+Build a **game-runtime integration** (not a second belief engine) in which:
 
-- a world is recursively constructed from composable constraints;
-- local systems evolve as weighted dynamical graphs (SpaceWheat: open-system steppers where that game already does so);
-- each observer holds a private, uncertainty-aware model of the shared world;
-- history is a tamper-evident branching path through state space;
-- authors and players may insert events nonchronologically only when a valid evolution can connect the surrounding states;
-- recurring physical, social, personal, and narrative processes are represented as loops and braids;
-- every entity and process has a seven-dimensional semantic/value coordinate projected into a navigable Spirit Cube;
-- the complete runtime is exposed to the player through Fledgeling rather than as a physics library.
+- a world is recursively constructed from composable **structural** constraints
+  (Universal Architect);
+- local systems **evolve** under declared dynamics (SpaceWheat or other steppers);
+- each observer holds a **private, uncertainty-aware** model of the shared ground
+  (umwelt);
+- history is a **tamper-evident branching path** through state space (Knot Ledger) —
+  distinct from process-phase memory (Berry Tape);
+- authors and players may insert events nonchronologically only when a **verified
+  evolution** can connect the surrounding anchors;
+- recurring processes are represented as **loops and braids** (kairos + ledger),
+  not only as wall-clock sequences;
+- entities and processes may carry a **seven-axis semantic/value coordinate**
+  (Spirit Cube), used to rank and interpret — never to override physical validity;
+- the complete experience is exposed through **Fledgeling** (play, attention,
+  story, UI), not as a physics library or theory dump.
 
 In one line:
 
 > **State is place; evolution is path; habit is loop; society is braid; history is a witnessed knot; play is the deliberate reweaving of that knot.**
 
+Symbolic derivation of the runtime’s 3 / 7 / 12 counts (declared frame, not physics):
+
+> Unity → relation (two) → triad (three) → seven nonzero binary expressions of the triad → twelve Pearl incidences (four nonzero masks per principle × three principles).  
+> Source: [Paul Spooner / @dudecon, 2026-02-24](https://x.com/dudecon/status/2026401325706260491).
+
+### 0.1 Integration posture (read this before expanding cosmology)
+
+| Principle | Meaning |
+|---|---|
+| **Sibling, not rewrite** | Build `septacrypt-core` as a sibling integration repo. Pin umwelt / Architect / SpaceWheat / Fledgeling commits. Do **not** merge monorepos or re-fork the belief substrate. |
+| **umwelt is the belief face** | FL-core Phases 1–5 already ship observe/intend/beliefs/step, multi-mind privacy, agency, and public synthetic kits. Integration **consumes** that API; it does not reimplement it. |
+| **Knot Ledger is new** | Durable stamps, branch DAG, transition certificates, and nonlinear insertion are **not** umwelt features. umwelt save/load is only a checkpoint backend. |
+| **Berry ≠ history** | Berry Tape indexes process phase / loop geometry. Knot Ledger owns durable path identity. Never let geometric nearness mint a causal edge. |
+| **Spirit ranks, physics gates** | Spirit vectors may rank valid candidates. They never legalize an impossible transition. |
+| **Prove the knot first** | Nested Reactor end-to-end proof before D20 lore, spectral folds, or full Fledgeling product chrome. |
+| **Plain host face** | Game boundary speaks belief/confidence/intent/history — not density matrices or “quantum product” branding. |
+
+**What is already enough on the umwelt side (do not rebuild):**
+
+```text
+umwelt.host.GameHost          observe / intend / beliefs / step / step_turn
+umwelt.host.WorldSession      shared ground + N private minds + masks
+umwelt.host.agency_loop       sub-routines, attention, earned shadow auto-intend
+examples/fledgeling_fog       public synthetic corridor + demos
+umwelt.kits.{fog,attention,market,dream}
+learning.confounding          graph surface + actor_id intent log
+clocks.berry_tape             process-phase machinery (not the ledger)
+```
+
+**What still lives outside umwelt (next integration work):**
+
+```text
+septacrypt-core               skeleton, CLI, proofs, CLAIMS_SEPTACRYPT
+Knot Ledger                   stamps, DAG, certificates, retro-insert
+Universal Architect IR        multi-target compile → DomainSpec + dynamics + schemas
+SpaceWheat (or stand-in)      ground evolution charts for Nested Reactor
+Spirit Cube runtime           7-axis frames, projection, non-authoritative scoring
+Fledgeling host (Phase 6)     playable SI loop, seven-face navigation UI
+```
+
 ---
 
 ## 1. The seven-component architecture
 
-The prior architecture contained six functional components. **Spirit Cube is the seventh**, supplying the semantic/value geometry that the other components were missing.
+The architecture has **seven software faces**. **Spirit Cube is the key face**: it
+supplies semantic/value geometry the other six cannot invent from structure,
+dynamics, belief, or path alone.
 
-| # | Component | Governing question | Responsibility | Existing source |
-|---|---|---|---|---|
-| 1 | **Universal Architect** | What can exist or be made consistent? | Recursive composition, resource/affordance closure, abductive support generation | `dudecon/Universal-Architect` |
-| 2 | **SpaceWheat manifold** | How does it evolve? | Local open-system / manifold dynamics, coupled loops, weighted graph physics | `AQuantumArchitect/SpaceWheat` |
-| 3 | **umwelt** | What does this observer believe? | Partial observation, confidence, trust, forecasting, self-action hygiene, private belief fields | `AQuantumArchitect/umwelt` |
-| 4 | **Berry Tape** | Where are we in the process? | Kaironic indexing, phase accumulation, return/loop detection, working-memory stamps | existing umwelt machinery |
-| 5 | **Knot Ledger** | What path has been witnessed or proposed? | Durable event provenance, branch DAG, transition certificates, replay, nonlinear insertion | new sibling layer |
-| 6 | **Fledgeling** | How does a player perceive and intervene? | SI agency, attention, subroutines, story interaction, rendering and game loop | `dudecon/Fledgeling_HTML` + design site |
-| 7 | **Spirit Cube** | What does it mean, want, or value? | Three-generator/seven-state semantic ontology, Pearl incidences, seven-dimensional interpretation vectors, desire and narrative scoring | Paul Spooner Spirit Cube / Septacrypt work |
+| # | Component | Governing question | Responsibility | Source | Integration status |
+|---|---|---|---|---|---|
+| 1 | **Universal Architect** | What can exist or be made consistent? | Recursive composition, resource/affordance closure, abductive support generation | `dudecon/Universal-Architect` | Open — needs instance IDs + multi-target IR (§7) |
+| 2 | **SpaceWheat manifold** | How does it evolve? | Local open-system / manifold dynamics, coupled loops, weighted graph physics | `AQuantumArchitect/SpaceWheat` | Open — consume as dynamics; Nested Reactor may use a thin stand-in first |
+| 3 | **umwelt** | What does this observer believe? | Partial observation, confidence, trust, forecasting, self-action hygiene, private belief fields | `AQuantumArchitect/umwelt` | **FL-core 1–5 shipped** — pin as dependency |
+| 4 | **Berry Tape** | Where are we in the process? | Kaironic indexing, phase accumulation, return/loop detection, working-memory stamps | umwelt machinery | Machinery exists — attach to ledger stamps in integration |
+| 5 | **Knot Ledger** | What path has been witnessed or proposed? | Durable event provenance, branch DAG, transition certificates, replay, nonlinear insertion | new sibling layer | **Not started** — primary new code |
+| 6 | **Fledgeling** | How does a player perceive and intervene? | SI agency, attention, subroutines, story interaction, rendering and game loop | `dudecon/Fledgeling_HTML` + design site | Partial control-plane demos in umwelt; product host open |
+| 7 | **Spirit Cube** | What does it mean, want, or value? | Three-generator / seven-state semantic ontology, Pearl incidences, seven-axis interpretation vectors, desire and narrative scoring | Paul Spooner Spirit Cube / Septacrypt + [X source](https://x.com/dudecon/status/2026401325706260491) | Ontology declared — runtime placeholder only until Nested Reactor |
 
 ### 1.1 Why Spirit Cube is load-bearing
 
@@ -147,23 +202,36 @@ docs/source_artifacts/dudecon_x_2026401325706260491/
 
 ### 2.4 Septacrypt source cosmology: 1 → 2 → 3 → 7 → 12
 
-Treat the following as the project's **declared theological and symbolic frame**, not as an empirical physics claim:
+Treat the following as the project's **declared theological and symbolic frame**,
+not as an empirical physics claim and not as a default morality kernel for agents.
+Canonical prose source:
+[Paul Spooner (@dudecon), 2026-02-24](https://x.com/dudecon/status/2026401325706260491).
 
-1. **One — unity:** God as unity.
-2. **Two — relation:** Love entails another, expressed as Father and Son.
-3. **Three — relational reality:** the Spirit is the reality of that relation and recursively reflects the triad.
-4. **Seven — non-void binary expressions:** simplify the triad to three named bits. Of the eight possible masks, `000` is set apart, leaving seven nonzero states.
-5. **Twelve — Pearls:** for each of the three Persons/principles, retain the four nonzero masks containing that Person's bit. This produces `3 × 4 = 12` Person-state incidences.
+**Derivation (compressed from the source post):**
 
-Use a named-bit convention rather than relying on ambiguous display order:
+1. **One — unity.** “1 is unity, which is God.”
+2. **Two — relation.** “God is Love, which requires another, the Son. 1+1=2.”
+3. **Three — Spirit as real relation.** The Love between Father and Son is so real
+   that it has an eternal reality of its own, the Spirit. “1+1+1=3.”
+4. **Seven — binary map of the Spirit’s fractal triad.** The Spirit is a fractal
+   representation of God’s nature (Father, Son, Spirit aspects). Simplifying that
+   fractal to three on/off bits yields **8** masks; the trivial case **`000` is the
+   lack of divinity and is not counted among the seven**. That is the significance of **7**.
+5. **Twelve — Pearls.** Re-map the seven nonzero states onto all three Persons,
+   retaining only those masks that contain the base bit for each Person: **4 per
+   Person × 3 = 12**. That is the foundation of **12**.
+
+**Named-bit convention** (string written left-to-right as Father, Son, Spirit —
+matching the post’s “1st / 2nd / 3rd bit” assignment). Code stores **named
+principles**, never bit-order alone:
 
 ```text
-Father = 100
-Son    = 010
-Spirit = 001
+Father = 100   # 1st bit
+Son    = 010   # 2nd bit
+Spirit = 001   # 3rd bit
 ```
 
-Default Septacrypt mapping:
+**Sevenfold acclimations** (verbatim mapping from the source post):
 
 | Mask | Acclamation | Active principles |
 |---|---|---|
@@ -175,7 +243,12 @@ Default Septacrypt mapping:
 | `110` | Honor | Father + Son |
 | `111` | Blessing | Father + Son + Spirit |
 
-Code must store the named principles explicitly. Serialization may display bits in any documented order, but semantic identity must never depend on whether a human reads the string left-to-right or right-to-left.
+Serialization may display bits in any documented order, but semantic identity must
+never depend on whether a human reads the string left-to-right or right-to-left.
+
+**Optional diegetic extensions** (not runtime-required): e.g. the twelve-apostles
+illustration in the reply thread to the source post. Keep such mappings in content
+packs / world lore, not in hard physics.
 
 ### 2.5 The Pearl-edge identity
 
@@ -202,7 +275,8 @@ Every undirected edge of `Q3` has exactly one such orientation toward `000`, so:
 
 > **The twelve Pearls are in bijection with the twelve single-bit-flip edges of the three-qubit basis cube.**
 
-This provides the strongest bridge in the architecture:
+This is the strongest *combinatorial* bridge between the declared symbolic frame
+and the three-bit process grammar:
 
 ```text
 3 named generators / Persons
@@ -214,7 +288,11 @@ This provides the strongest bridge in the architecture:
 12 oriented Q3 transitions toward or away from the void reference
 ```
 
-The theological 12 and the Hamiltonian/transition 12 are therefore not merely equal counts; they share an explicit incidence structure.
+The theological 12 and the Hamming-edge 12 are therefore not merely equal counts;
+they share an explicit incidence structure. That does **not** mean the runtime must
+simulate a full multipartite quantum state for every entity — only that the
+**labels and transitions** of the three-bit cube are available as a weighted
+combinatorial chart when a world opts into them.
 
 ### 2.6 `000`: void, Holy Dark, and reference state
 
@@ -686,11 +764,12 @@ Compiler targets:
 
 ---
 
-## 8. Nested quantum charts and scale transitions
+## 8. Nested scale charts and transitions
 
-### 8.1 Atlas, not one universe-sized density matrix
+### 8.1 Atlas, not one universe-sized state object
 
-Each recursively composed subsystem owns a local chart. Parents see a reduced logical interface.
+Each recursively composed subsystem owns a local chart (SpaceWheat may use open-system
+state; umwelt minds stay separate). Parents see a reduced logical interface.
 
 ```text
 component charts
@@ -854,19 +933,42 @@ Never allow a high Spirit score to legalize an impossible transition.
 
 ## 10. Fledgeling host contract
 
-Provide a plain game-facing API that hides quantum vocabulary unless a designer explicitly requests it.
+Provide a plain game-facing API. Substrate / combinatorial-chart vocabulary stays
+internal unless a designer explicitly opts into a debug face.
+
+### 10.1 Already shipped in umwelt (consume, do not reimplement)
 
 ```python
-session.observe(observer_id, channel, value, confidence, t)
+# umwelt.host — FL-core Phases 2–4 (public synthetic gates in this monorepo)
+from umwelt.host import GameHost, WorldSession
+from umwelt.host.agency_loop import AgencyLoop, SubRoutine, PromotionGate
+
+host = GameHost()
+host.register_world(spec)
+host.observe(observer_id, channel, value, confidence, t)
+host.beliefs(observer_id, query)          # Belief(value, confidence)
+host.intend(actor_id, intent)             # Decision(shadow|live)
+host.step() / host.step_turn(n)
+
+session = WorldSession().register_world(spec)
+session.add_mind(observer_id, channel_mask=...)
+```
+
+### 10.2 Integration face (septacrypt-core — still to build)
+
+Compose umwelt minds with ledger / spirit / retro-insert. Suggested shape:
+
+```python
+session.observe(observer_id, channel, value, confidence, t)   # → umwelt mind
 session.beliefs(observer_id, query)
 session.intend(actor_id, intent)
 session.step(dt_or_turn)
-session.history(query, observer_id=None)
+session.history(query, observer_id=None)                      # → Knot Ledger
 session.propose_insertion(anchor_a, anchor_d, proposal)
 session.verify_insertion(candidate_id)
 session.commit_insertion(candidate_id)
 session.branch(from_stamp, label)
-session.project_spirit(observer_id, projection_id)
+session.project_spirit(observer_id, projection_id)            # → Spirit Cube
 session.inspect_knot(process_query, scale)
 ```
 
@@ -876,62 +978,42 @@ Fledgeling owns:
 - input;
 - dialogue/presentation;
 - player attention and permissions;
-- subroutine teaching;
+- subroutine teaching UI;
 - scenario content.
 
-Core owns:
-
-- belief contracts;
-- history verification;
-- branch/replay;
-- structural compilation;
-- dynamics interfaces;
-- semantic coordinates and provenance.
+**umwelt** owns belief contracts (partial observation, shadow/live, multi-mind privacy).  
+**septacrypt-core** owns history verification, branch/replay, structural compilation
+hooks, dynamics ports, and Spirit coordinates/provenance.
 
 ---
 
 ## 11. Repository strategy
 
-Start as a sibling integration repository. Do not destabilize umwelt or Universal Architect until boundaries are proven.
+Start as a **sibling integration repository**. Do not destabilize umwelt or Universal
+Architect until boundaries are proven. Do **not** reimplement FL-core inside
+`minds/` — wrap `umwelt.host` instead.
 
 ```text
-septacrypt-core/
+septacrypt-core/                    # NEW sibling repo (or workspace package)
   pyproject.toml
   src/septacrypt_core/
-    architect/
-      ir.py
-      compiler.py
-      alternatives.py
-    geometry/
-      counts.py
-      qgraph.py
-      dice_maps.py
-      gauge.py
-      spirit_projection.py
-    dynamics/
-      chart.py
-      fold.py
-      transition.py
-    ledger/
+    architect/                      # IR + compile targets (may call out-of-tree UA)
+    geometry/                       # Q_n, dice maps, Pearl edges (combinatorial)
+    dynamics/                       # chart ports; SpaceWheat or thin stand-in
+    ledger/                         # Knot Ledger — primary new code
       stamp.py
       dag.py
       roots.py
-      checkpoint.py
+      checkpoint.py                 # wraps umwelt engine.save/load initially
       replay.py
-    kairos/
-      berry_index.py
-      loops.py
-      braid.py
-    minds/
+    kairos/                         # Berry index attachment (uses umwelt berry tape)
+    minds/                          # thin facade over umwelt.host.WorldSession
       session.py
       observer.py
       attribution.py
-    spirit/
-      frame.py
-      vector.py
-      scoring.py
+    spirit/                         # SpiritVector frames — non-authoritative at first
     host/
-      api.py
+      api.py                        # §10.2 composition face
       fledgeling_adapter.py
   examples/
     nested_reactor/
@@ -945,18 +1027,26 @@ septacrypt-core/
     KNOT_LEDGER.md
     CLAIMS_SEPTACRYPT.md
     source_artifacts/
+      dudecon_x_2026401325706260491/
 ```
 
 Pin dependency commits during the spike:
 
 ```text
-umwelt @ <commit>
-SpaceWheat @ <commit>
+umwelt @ <commit>                 # FL-core 1–5 green on this pin
+SpaceWheat @ <commit>             # optional for first Nested Reactor stand-in
 Universal-Architect @ <commit>
 Fledgeling_HTML @ <commit>
 ```
 
-No integration claim is promoted without a public fixture and a repeatable proof.
+**Integration rules**
+
+1. No integration claim is promoted without a public fixture and a repeatable proof.
+2. umwelt vocabulary lint stays green — no domain / house / Fledgeling lore in
+   `src/umwelt/`.
+3. If multi-engine mind cost becomes a product issue, document a partition design in
+   the sibling repo; do not silently change umwelt’s privacy semantics.
+4. Prefer **hand-authored Nested Reactor** before Architect auto-compile is ready.
 
 ---
 
@@ -986,7 +1076,7 @@ Coolant:     ❄️ cooling ↔ 🔥 heating
 Reactor:     ⚛️ stable ↔ ☢️ runaway
 ```
 
-Use a three-qubit chart for the pump/valve/sensor microstate and test the D6/D8/D12 mapping.
+Use a three-bit combinatorial chart for the pump/valve/sensor microstate and test the D6/D8/D12 mapping (attached weights optional; not a full multipartite state).
 
 ### 12.3 Scenario
 
@@ -1035,10 +1125,10 @@ Use a three-qubit chart for the pump/valve/sensor microstate and test the D6/D8/
 **Deliverables**
 
 - archive screenshots/mesh metadata for Spirit Cube;
-- archive the supplied X post text, mapping table, and any associated diagram/media;
+- archive [https://x.com/dudecon/status/2026401325706260491](https://x.com/dudecon/status/2026401325706260491) text, acclamation table, and any reply-thread media (e.g. 12-apostles illustration as optional lore);
 - extract Septacrypt face adjacency;
-- write ADRs for component count, face mapping, named-bit orientation, `000` semantics, truth modes, and geometry claims;
-- freeze 90-day non-goals.
+- write ADRs for sibling integration, component count, face mapping, named-bit orientation, `000` semantics, truth modes, geometry claims, and **pin umwelt FL-core as belief dependency**;
+- freeze 90-day non-goals (§16).
 
 **Gate:** all source artifacts are locally referenceable and the seven-component map is signed off.
 
@@ -1070,15 +1160,19 @@ Use a three-qubit chart for the pump/valve/sensor microstate and test the D6/D8/
 
 ### Phase 3 — Shared ground / private minds
 
-**Deliverables**
+**Status in umwelt monorepo (2026-07):** largely **done** for the belief face —
+`WorldSession`, channel masks, actor-keyed intent log, privacy suite, multi-engine
+cost probe. See [FLEDGELING_CORE.md](FLEDGELING_CORE.md) Phase 3 and
+`tests/test_multimind_privacy.py`.
 
-- `WorldSession`;
-- observer masks;
-- actor-keyed confounding;
-- private belief fields;
-- truth-mode projections.
+**Remaining for septacrypt-core**
 
-**Gate:** two-agent corridor/reactor privacy test; one agent’s action does not become another’s unexplained fact.
+- wire Nested Reactor observers (Keith / Dwayne) through the same contracts;
+- truth-mode projections for ledger-facing queries (rumor vs fact vs inference);
+- optional: richer per-intent competence surfaces per agent.
+
+**Gate:** two-agent reactor privacy test on the Nested Reactor fixture (reuse umwelt
+assertions; do not re-prove the fog corridor alone as “done”).
 
 ### Phase 4 — Universal Architect IR/compiler
 
@@ -1216,8 +1310,10 @@ These are targets, not promises. Record actual numbers in the claims ledger.
 | Retro search explodes | local cones, beam limits, latent-entity budgets, unknown-cause baseline |
 | LLM invents ground truth | claims are observations; deterministic verifier gates writes |
 | Seven Spirits become an imposed morality | declared replaceable frames, observer/culture specificity, transparent scoring |
-| Integration damages mature umwelt behavior | sibling repository and pinned dependency commits |
+| Integration damages mature umwelt behavior | sibling repository and pinned dependency commits; wrap host API |
 | Metaphor outruns evidence | `CLAIMS_SEPTACRYPT.md`; every phase ends with public proofs and denied results |
+| Rebuilding FL-core inside septacrypt | pin umwelt; minds/ is a facade only |
+| Theology treated as runtime physics | keep §2.4 as declared frame; Spirit never overrides validity |
 
 ---
 
@@ -1240,24 +1336,27 @@ These are targets, not promises. Record actual numbers in the claims ledger.
 
 ### Sprint objective
 
-Prove the **smallest complete knot**: a three-qubit reactor subsystem, a durable branchable ledger, and one valid nonlinear event insertion.
+Prove the **smallest complete knot**: a three-bit reactor subsystem (combinatorial
+chart), a durable branchable **Knot Ledger**, and one valid nonlinear event insertion —
+**on top of** pinned umwelt FL-core, not by rewriting it.
 
 ### Ordered tasks
 
-1. Create `septacrypt-core` skeleton and pin dependency commits.
-2. Save the Spirit Cube, X-post, and Septacrypt design artifacts locally.
+1. Create `septacrypt-core` skeleton; pin umwelt (FL-core 1–5 green) + other deps.
+2. Archive Spirit Cube materials and the [source X post](https://x.com/dudecon/status/2026401325706260491) under `docs/source_artifacts/`.
 3. Implement `QubitCombinatorics(n)` returning poles, basis states, and Hamming-one edges.
-4. Implement and test D6/D8/D12 mappings for `n=3`.
+4. Implement and test D6/D8/D12 mappings for `n=3` (combinatorial grammar, not “full quantum state”).
 5. Define `KnotStamp`, `TransitionCertificate`, and canonical state-root interfaces.
-6. Wrap umwelt save/load state as an initial checkpoint backend.
+6. Wrap umwelt `engine.save` / `load` / `field_canon_hash` as the initial checkpoint backend.
 7. Implement branch overlays over an immutable event prefix.
 8. Hand-author the first Nested Reactor world; do **not** wait for the Architect compiler.
-9. Execute and replay valve-close → overheating.
-10. Insert a maintenance event between anchor states and verify endpoint reachability.
-11. Attach Berry coordinates to stamps.
-12. Add a placeholder seven-axis `SpiritVector` to entities/events without using it for control yet.
-13. Produce `proofs/nested_reactor_knot.py` and a machine-readable result report.
-14. Update `CLAIMS_SEPTACRYPT.md` with proven, owed, and denied rows.
+9. Drive ground + private minds via `umwelt.host.WorldSession` (Keith / Dwayne masks).
+10. Execute and replay valve-close → overheating; assert divergent beliefs.
+11. Insert a maintenance event between anchor states and verify endpoint reachability.
+12. Attach Berry coordinates to stamps (kairos ≠ causal edge).
+13. Add a placeholder seven-axis `SpiritVector` (acclamation names from §2.4) without using it for control.
+14. Produce `proofs/nested_reactor_knot.py` and a machine-readable result report.
+15. Update `CLAIMS_SEPTACRYPT.md` with proven, owed, and denied rows.
 
 ### Sprint completion definition
 
@@ -1302,15 +1401,17 @@ septacrypt prove nested-reactor
 
 Create ADRs before implementation drifts:
 
-1. `ADR-001`: sibling integration repository.
+1. `ADR-001`: sibling integration repository (`septacrypt-core`), not monorepo merge.
 2. `ADR-002`: seven components and Septacrypt face assignment.
-3. `ADR-003`: shared ground / private umwelten.
+3. `ADR-003`: shared ground / private umwelten — **consume `umwelt.host.WorldSession`**.
 4. `ADR-004`: Merkle DAG plus checkpoints, not inverse physics as history foundation.
 5. `ADR-005`: geometric solids are weighted combinatorial carriers, not complete state by shape alone.
 6. `ADR-006`: Spirit vectors rank valid possibilities but cannot override physical validity.
 7. `ADR-007`: raw eigenvectors are not persistent identities.
 8. `ADR-008`: Berry adjacency and causal adjacency are separate relations.
 9. `ADR-009`: public synthetic fixtures are required for every promoted claim.
+10. `ADR-010`: umwelt FL-core is the belief face; do not reimplement observe/intend/beliefs in core.
+11. `ADR-011`: named-bit Father/Son/Spirit convention and 7 acclamations from the 2026-02-24 source post.
 
 ---
 
@@ -1321,7 +1422,8 @@ Create ADRs before implementation drifts:
               seven-face spatial/user embedding
                               │
                       SPIRIT CUBE / KEY
-             7D meaning, desire, interpretation
+         7 acclimations + 12 Pearls (declared frame)
+         ranks meaning — never overrides validity
                               │
        ┌──────────────────────┴──────────────────────┐
        │                                             │
@@ -1331,26 +1433,39 @@ Universal Architect                      Berry Tape
 structure / affordance closure            kairos / loops / returns
        │                                             │
        ▼                                             ▼
-SpaceWheat manifold  ───────────────►     Knot Ledger
+SpaceWheat manifold  ───────────────►     Knot Ledger   ◄── NEW (sibling)
 local dynamics and coupled processes      paths / stamps / branches / proofs
        │                                             │
        ▼                                             ▼
-umwelt                                      Fledgeling
-private belief and uncertainty              attention / agency / story / play
+umwelt (FL-core 1–5 ✓)                    Fledgeling
+private belief + host face                attention / agency / story / play
 
-Cross-cutting formal language:
-D2 / D4 / D6-D8-D12 / open D20 geometric-qubit grammar
+Cross-cutting combinatorial grammar (opt-in charts):
+D2 / D4 / D6-D8-D12 / open D20  — carriers with attached weights, not full state by shape
 ```
 
-The architecture is complete enough to build. The unresolved questions are now deliberately bounded research programs:
+**Build order (integration, not cosmology expansion):**
 
-- exact Spirit Cube/Septacrypt spatial projection;
-- incidence-preserving solid mappings beyond three qubits;
+```text
+1. Pin umwelt FL-core
+2. Knot Ledger MVP + Nested Reactor hand world
+3. Private minds on reactor fixture (reuse WorldSession)
+4. Retro-insert + certificates
+5. Spirit vectors non-authoritative
+6. Architect IR + Fledgeling host polish
+7. Folds / D20 only after semantic baselines
+```
+
+The architecture is complete enough to integrate. Unresolved research (deliberately
+bounded):
+
+- exact Spirit Cube / Septacrypt spatial projection into UI;
+- incidence-preserving solid mappings beyond three bits;
 - the role, if any, of D20;
-- which spectral folds measurably outperform declared semantic reductions;
-- how far retro-generation can scale before authorial constraints must dominate.
+- which spectral folds beat declared semantic reductions;
+- how far retro-generation scales before authorial constraints dominate.
 
-The project should proceed by proving the Nested Reactor knot, not by expanding the cosmology first.
+Proceed by proving the Nested Reactor knot, not by expanding the cosmology first.
 
 ---
 
@@ -1360,9 +1475,10 @@ The project should proceed by proving the Nested Reactor knot, not by expanding 
 - Fledgeling HTML prototype: https://github.com/dudecon/Fledgeling_HTML
 - Universal Architect: https://github.com/dudecon/Universal-Architect
 - umwelt: https://github.com/AQuantumArchitect/umwelt
+- umwelt FL-core status: [FLEDGELING_CORE.md](FLEDGELING_CORE.md)
 - SpaceWheat: https://github.com/AQuantumArchitect/SpaceWheat
 - Spirit Cube model: https://sketchfab.com/3d-models/spirit-cube-bdcfaf40b1e447e69b8db95b465ff39c
-- Geometry post to archive: https://x.com/dudecon/status/2026401325706260491
+- **Canonical 1→2→3→7→12 derivation (archive this):** https://x.com/dudecon/status/2026401325706260491
 - Septacrypt: https://peripheralarbor.com/gallery/Projects/SeptaCrypt/
 
 
@@ -1371,32 +1487,47 @@ The project should proceed by proving the Nested Reactor knot, not by expanding 
 
 ## Appendix A — normalized source statement
 
-Paul Spooner's supplied source establishes the project's canonical symbolic derivation:
+Canonical narrative source:
+[https://x.com/dudecon/status/2026401325706260491](https://x.com/dudecon/status/2026401325706260491)
+(Paul Spooner / @dudecon, 2026-02-24). Archive verbatim under
+`docs/source_artifacts/dudecon_x_2026401325706260491/`.
+
+Compressed chain used by the runtime:
 
 ```text
-unity → relation → triad → seven nonzero binary composites → twelve Pearls
+unity → relation (two) → triad (three)
+      → seven nonzero binary composites of the triad
+      → twelve Pearls (4 nonzero masks per principle × 3)
 ```
 
-Normalized implementation form:
+**Source mapping of acclimations** (do not silently rename):
+
+```text
+001 Wisdom | 010 Might | 100 Wealth
+011 Power  | 101 Glory | 110 Honor | 111 Blessing
+```
+
+Normalized implementation form (named principles; bit order documented):
 
 ```yaml
+# string form FSS = Father Son Spirit left-to-right
 principles:
   father: 0b100
   son: 0b010
   spirit: 0b001
 
 states:
-  0b000: {name: Holy Dark, class: void_reference}
-  0b001: {name: Wisdom}
-  0b010: {name: Might}
-  0b100: {name: Wealth}
-  0b011: {name: Power}
-  0b101: {name: Glory}
-  0b110: {name: Honor}
-  0b111: {name: Blessing}
+  0b000: {name: Holy Dark, class: void_reference}  # "lack of divinity" — not one of the seven
+  0b001: {name: Wisdom}    # Spirit
+  0b010: {name: Might}     # Son
+  0b100: {name: Wealth}    # Father
+  0b011: {name: Power}     # Son + Spirit
+  0b101: {name: Glory}     # Father + Spirit
+  0b110: {name: Honor}     # Father + Son
+  0b111: {name: Blessing}  # Father + Son + Spirit
 ```
 
-Pearls are generated rather than hand-authored:
+Pearls are **generated** (4 per principle × 3), never hand-authored ad hoc:
 
 ```python
 pearls = [
@@ -1411,7 +1542,8 @@ assert len(pearls) == 12
 Each Pearl also yields an oriented basis transition:
 
 ```python
-edge = (state, state ^ principle.mask)  # clears the active bit
+edge = (state, state ^ principle.mask)  # clears the active bit toward void
 ```
 
-This generated representation is the single source of truth for the mapping table, D12 transition labels, Spirit Cube sectors, and tests.
+This generated representation is the single source of truth for the mapping table,
+D12 transition labels, Spirit Cube sectors, and tests. Optional lore mappings are content-pack data, not required for the Nested Reactor gate.
