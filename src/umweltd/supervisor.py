@@ -38,6 +38,7 @@ logger = logging.getLogger("umweltd.supervisor")
 DEFAULT_PORT = 7071
 NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 SPAWN_TIMEOUT_S = 60.0
+GATE_TIMEOUT_S = 60.0
 WATCHDOG_INTERVAL_S = float(os.environ.get("UMWELTD_WATCHDOG_INTERVAL_S", "10.0"))
 CRASH_WINDOW_S = 300.0
 CRASH_GIVEUP_COUNT = 5
@@ -45,6 +46,12 @@ CRASH_GIVEUP_COUNT = 5
 
 def home() -> Path:
     return Path(os.environ.get("UMWELTD_HOME", Path.home() / ".umweltd"))
+
+
+def _ref_shape_ok(ref: str) -> bool:
+    """True iff ref has the 'module:attr' shape every worker seam requires."""
+    module_name, _, attr = str(ref).partition(":")
+    return bool(module_name and attr)
 
 
 class Supervisor:
@@ -96,6 +103,18 @@ class Supervisor:
             raise ValueError(f"bad world name {name!r}")
         if not body.get("spec"):
             raise ValueError("a world needs a spec ref ('module:ATTR')")
+        # First-contact kindness: refuse a manifest that would kill the worker HERE,
+        # with the fix named, instead of a worker-exit 500 whose truth lives only in
+        # the daemon log (the first external hive deployment's three scars).
+        vocab = body.get("vocabulary")
+        if vocab and not _ref_shape_ok(vocab):
+            raise ValueError(
+                f"vocabulary ref {vocab!r} must be 'module:function' — a bare module "
+                f"name gives the worker nothing to call (did you mean "
+                f"{vocab}:register_vocabulary?)")
+        if not _ref_shape_ok(body["spec"]):
+            raise ValueError(f"spec ref {body['spec']!r} must be 'module:ATTR' "
+                             f"(e.g. 'examples.gridworld.world:SPEC')")
         max_worlds = os.environ.get("UMWELTD_MAX_WORLDS")
         if max_worlds is not None and len(self.catalog()) >= int(max_worlds):
             raise ValueError(
@@ -104,10 +123,49 @@ class Supervisor:
         wd = WorldDir(self.worlds_root() / name)
         if wd.manifest_path.exists():
             raise ValueError(f"world {name!r} already exists")
+        self._gate_spec(body)
         wd.write_manifest({k: v for k, v in body.items() if v is not None})
         port = self.spawn(name)
         self.desired.add(name)
         return {"name": name, "port": port}
+
+    def _gate_spec(self, body: dict) -> None:
+        """Resolve + sanity-check the manifest's spec (and vocabulary) in a FRESH
+        subprocess BEFORE anything spawns — the forge-gate discipline
+        (umweltforge.pipeline.run_validation), applied at the daemon's front door.
+        Cheap by construction: `--resolve-only` stops the gate after resolve +
+        schema_sanity (no engine boot, no worker). spec_path is honored exactly the
+        way the worker honors it (dirs prepended to the import path). Raises
+        ValueError (→ a 400 with the subprocess's precise error text) on refusal."""
+        cmd = [sys.executable, "-m", "umwelt.spec.validate", body["spec"],
+               "--json", "--resolve-only"]
+        if body.get("vocabulary"):
+            cmd += ["--vocabulary", body["vocabulary"]]
+        env = os.environ.copy()
+        raw = body.get("spec_path")
+        dirs = [raw] if isinstance(raw, str) else list(raw or [])
+        if dirs:
+            resolved = [str(Path(p).expanduser().resolve()) for p in dirs]
+            env["PYTHONPATH"] = os.pathsep.join(
+                resolved + [env.get("PYTHONPATH", "")]).rstrip(os.pathsep)
+        try:
+            out = subprocess.run(cmd, env=env, capture_output=True, text=True,
+                                 timeout=GATE_TIMEOUT_S)
+        except subprocess.TimeoutExpired:
+            raise ValueError(f"spec gate timed out after {GATE_TIMEOUT_S:.0f}s "
+                             f"resolving {body['spec']!r}")
+        if out.returncode == 0:
+            return
+        try:
+            report = json.loads(out.stdout)
+            detail = "; ".join(
+                f"{c['name']}: {c['detail']}" for c in report.get("checks", ())
+                if not c.get("ok") and not c.get("skipped")) or "spec gate failed"
+        except (json.JSONDecodeError, TypeError, KeyError):
+            detail = ((out.stderr or out.stdout).strip()[-2000:]
+                      or "spec gate emitted nothing")
+        raise ValueError(
+            f"world {body.get('name')!r} refused before spawn — {detail}")
 
     def stop(self, name: str) -> dict:
         self.desired.discard(name)
