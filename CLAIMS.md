@@ -82,6 +82,7 @@ findings only.
 | **Free-run rollouts are rank-preserving at daily×hourly-hold cadence**: `FieldRolloutForecaster` h=1..5 sessions matched hold-the-last-belief to ~0.001 direction AUC both periods (24–120 hold units). Multi-day direction surface ≈ hold, not re-ranked free-run. | umwelt-market RESULTS_S2.md E-2 | FOREIGN-HARNESS-MEASURED |
 | **Membrane cadence earned its keep on market data**: burst-vs-`ingest_hold_s` A/B was equivalent-or-better for comprehension; starvation without either collapsed (harness Q1). | umwelt-market RESULTS.md burst-vs-hold; engine pin `tests/test_wall_pacing.py` | FOREIGN-HARNESS-MEASURED |
 | Fused-confidence collapse ↛ next-session \|return\|; Berry phase-rate ↛ trending/choppy filter at daily n (both pre-registered negatives). Re-tests owed on denser cadence. | umwelt-market RESULTS_S2.md E-1/E-3 | FOREIGN-HARNESS-MEASURED, NEGATIVE |
+| **Delayed-label trust does not rank orthogonal daily feeds by predictive skill**: harness called `TrustWeb.learn` with next-session return direction as label_z; mean Spearman(delayed reliability, lag+1 \|ρ\|) failed both years (promote rule: both >0.3 same sign). Complements LOO boundary: neither agreement labels nor outcome labels currently mint a reliability ranking worth product-facing skill claims on this domain. | umwelt-market RESULTS_DELAYED_LABEL.md | FOREIGN-HARNESS-MEASURED, NEGATIVE |
 
 Brief: [umwelt-market `docs/ENGINE_ASKS_2026-07-15.md`](https://github.com/AQuantumArchitect/umwelt-market/blob/main/docs/ENGINE_ASKS_2026-07-15.md).
 
