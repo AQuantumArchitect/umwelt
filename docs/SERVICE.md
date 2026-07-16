@@ -3,6 +3,11 @@
 The engine stays a library; `umweltd` (in `src/umweltd/`) wraps it as a local daemon
 so every harness — and eventually every SaaS — talks to one brain surface.
 
+**Sibling consumers** (septacrypt-core, umwelt-market, …) should pin this repo by
+git SHA or editable path and treat the daemon as substrate truth — see
+[FIELD_NOTES_SEPTACRYPT.md](FIELD_NOTES_SEPTACRYPT.md) §4–5 for service asks
+(composite world hash, cassette/event batches, snapshot↔checkpoint mapping).
+
 ## Shape
 
 ```

@@ -1,13 +1,20 @@
 # /plan — Fledgeling Septacrypt / Endless Knot Runtime
 
-**Status:** implementation plan, not a capability claim  
-**Revision:** 3 — integration status after umwelt FL-core 1–5; vision aligned to [dudecon X source](https://x.com/dudecon/status/2026401325706260491)  
+**Status:** implementation plan + **sibling harness now exists**  
+**Revision:** 4 — 2026-07: `septacrypt-core` vertical kernel live; transfer notes in [FIELD_NOTES_SEPTACRYPT.md](FIELD_NOTES_SEPTACRYPT.md)  
 **Working name:** `septacrypt-core`  
-**Primary demonstration:** *Nested Reactor / Missing Valve Event*  
+**Primary demonstration:** *Nested Reactor / Missing Valve Event* (plus witnessed-knot + GameSession handoff)  
 **Target audience:** a coding-agent team working across Fledgeling, umwelt, SpaceWheat, and Universal Architect
 
 This document is a **cross-repo research map and integration plan**, not umwelt
 product marketing and not a claim that the runtime is finished.
+
+**Sibling status (not monorepo pins):** the consumer repo
+[`AQuantumArchitect/septacrypt-core`](https://github.com/AQuantumArchitect/septacrypt-core)
+ships a playable kernel (cumulant reactor/ship, Knot Ledger certificates,
+fail-closed world steps, observer-safe status, `GAME_BUILDER.md`). Lessons for
+this monorepo are catalogued in [FIELD_NOTES_SEPTACRYPT.md](FIELD_NOTES_SEPTACRYPT.md)
+and [CLAIMS.md](../CLAIMS.md) §3c.
 
 - Open-system / density-matrix language here is mostly SpaceWheat’s native sim
   vocabulary or a **combinatorial chart** proposal — not a claim that umwelt is a

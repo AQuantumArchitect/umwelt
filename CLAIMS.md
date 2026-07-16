@@ -86,6 +86,23 @@ findings only.
 
 Brief: [umwelt-market `docs/ENGINE_ASKS_2026-07-15.md`](https://github.com/AQuantumArchitect/umwelt-market/blob/main/docs/ENGINE_ASKS_2026-07-15.md).
 
+## 3c. MEASURED ON THE SEPTACRYPT CONSUMER HARNESS (sibling runtime — 2026-07)
+
+Playable vertical kernel on real cumulant clusters + a **Knot Ledger** owned by the
+sibling repo (not this monorepo). Transferable engine/service lessons only; product
+lore and Monte Carlo win rates are **not** re-claimed here.
+
+Full write-up: [docs/FIELD_NOTES_SEPTACRYPT.md](docs/FIELD_NOTES_SEPTACRYPT.md).  
+Harness: `AQuantumArchitect/septacrypt-core` (e.g. hardening commit `81b2e53`).
+
+| claim | evidence | status |
+|---|---|---|
+| **UI focus must not select which subsystems evolve**: when the “active zone” chose which cluster received `step()`, camera changes altered the ship’s physical trajectory; fixing to all-zone world steps made final physics hashes independent of zone selection (consumer acceptance test). | septacrypt-core `tests/test_hardening.py::test_active_zone_does_not_change_physics`; [FIELD_NOTES_SEPTACRYPT.md §1](docs/FIELD_NOTES_SEPTACRYPT.md) | FOREIGN-HARNESS-MEASURED (consumer) |
+| **Fail-closed certified segments are implementable on cumulant substrates**: typed cassette → isolated apply → independent residual → stamp; bad branch head leaves world hash + ledger head unchanged. | septacrypt-core `world/transaction.py`, `tests/test_hardening.py::test_failed_certificate_leaves_world_unchanged` | FOREIGN-HARNESS-MEASURED (consumer) |
+| **Private first-moment snapshots still leak if status meta is ground-derived**: observer-facing mythos/mask/tension must come from belief (or explicit public facts); auto-rumor on LOOK is telepathy. Host multi-mind privacy remains the monorepo pin. | septacrypt-core `observers/beliefs.py` + hardening tests; monorepo `tests/test_multimind_privacy.py` | FOREIGN-HARNESS-MEASURED (consumer); engine privacy PINNED separately |
+| **Out-of-band field kicks break residual-zero replay** unless recorded as typed param/field events (consumer STIR). | septacrypt-core `tests/test_hardening.py::test_stir_and_wait_are_replayable` | FOREIGN-HARNESS-MEASURED (consumer) |
+| Composite world hash / cassette residual **as first-class umweltd or host APIs** | [FIELD_NOTES_SEPTACRYPT.md §4–7](docs/FIELD_NOTES_SEPTACRYPT.md) | EVALUATION OWED (engine/service) |
+
 ## 4. DESIGNED / EVALUATION OWED (say so out loud)
 
 | claim | evidence | status |
