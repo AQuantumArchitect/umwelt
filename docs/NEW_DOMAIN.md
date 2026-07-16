@@ -42,6 +42,30 @@ If your feed arrives sparsely (daily bars, not a dense poll), declare
 cadence plumbing, not a time model, and why your domain's actual clock (if it has
 one) belongs in a `DriverSpec` instead.
 
+### Worlds of reports
+
+Some worlds are fed **discrete claims**, not continuous readings: agent messages,
+session digests, test verdicts, manifest diffs. The first multi-LLM hive deployment
+([examples/hive_relay/README.md](../examples/hive_relay/README.md)) ran exactly this
+shape and left a scar worth naming: dissipative thermal-drive bindings barely move on
+isolated events, and with sessions hours apart a spec whose gammas satisfy
+`gamma × gap ≫ 1` relaxes every belief back to uncertainty between batches — no error
+anywhere, just a mute world. (`python -m umwelt.spec.validate` now warns on this
+combination when `ingest_hold_s` is declared.)
+
+For report-shaped signals, bind them as **observations**, not drive:
+
+- `force_observe=True` on the binding — a claim lands as a collapse event, moving the
+  belief once and letting it *hold* (and be priced by the trust web), instead of
+  needing sustained drive to matter.
+- `collapse_alpha` (or `strength`/`efficiency`) as the reporter's honest η — how far
+  one claim may move shared belief. The hive tape's lesson: agent self-reports were
+  wrong 4/9 times, so uncalibrated writes corrupt shared state; η-weighted
+  observations are the confidence contract that priced it correctly.
+- Keep dissipative bindings (and their gammas) for quantities that are genuinely
+  continuous *within* a session; give slow relaxation timescales to anything that
+  must survive the gaps *between* sessions.
+
 ## 2. Register your vocabulary
 
 Role modes, normalizers, decoders, drivers — registered at import in YOUR package,

@@ -150,6 +150,73 @@ def test_shadow_law_enforced_and_waivable():
     assert waived.ok, waived.summary()
 
 
+def test_bare_float_param_fails_schema_sanity_naming_node_and_key():
+    # The first external hive deployment's scar #2: a params value that isn't the
+    # (default, sigma[, lo, hi]) tuple used to die as a TypeError deep in the
+    # worker's ParameterBundle.from_dict. The gate must name the node AND the key.
+    spec = _tiny_spec(nodes=(
+        NodeSpec("top", parent=None, kind="root", roles=()),
+        NodeSpec("fleet", parent="top", roles=("level",),
+                 params={"gamma_diss_momentum": 0.01}),
+    ), bindings=(BindingSpec("sig_a", zone="fleet", role="level",
+                             normalizer="binary"),))
+    report = validate_spec(spec)
+    assert not report.ok
+    sanity = next(c for c in report.checks if c.name == "schema_sanity")
+    assert "node 'fleet' param 'gamma_diss_momentum'" in sanity.detail
+    assert "expected (default, sigma, lo, hi)" in sanity.detail
+    assert "float" in sanity.detail
+
+
+def _sparse_session_spec(gamma: float, hold: float = 3600.0) -> DomainSpec:
+    """A report-shaped world: one dissipative role, spec-declared gamma, sparse
+    batches (ingest_hold_s) — the mute-world shape of hive scar #3."""
+    return _tiny_spec(
+        name="sessions",
+        nodes=(
+            NodeSpec("top", parent=None, kind="root", roles=()),
+            NodeSpec("area_a", parent="top", roles=("level",),
+                     role_modes={"level": "dissipative"},
+                     params={"gamma_diss": (gamma, gamma / 2.0, 0.0, 1.0)}),
+        ),
+        ingest_hold_s=hold,
+    )
+
+
+def test_gamma_hold_warning_fires_and_teaches():
+    # gamma 0.01/s vs a 3600 s hold: gamma × hold = 36 ≫ 3 — beliefs fully relax
+    # between batches. A WARNING, never a failure: the spec is legal, just mute.
+    report = validate_spec(_sparse_session_spec(0.01))
+    assert report.ok, report.summary()          # warnings never gate
+    warn = next(c for c in report.checks if c.name == "gamma_vs_hold")
+    assert warn.warning and warn.ok
+    assert "area_a.level" in warn.detail
+    assert "half-life 69s" in warn.detail       # ln2 / 0.01
+    assert "3600" in warn.detail
+    assert "fully relax between batches" in warn.detail
+    assert "force_observe" in warn.detail       # the teaching: observe-collapse
+
+
+def test_gamma_hold_warning_stays_silent_when_gammas_survive_the_hold():
+    # gamma 1e-4/s × 3600 s = 0.36 < 3: the belief survives a hold, no warning.
+    report = validate_spec(_sparse_session_spec(1e-4))
+    assert report.ok
+    assert not any(c.name == "gamma_vs_hold" for c in report.checks)
+
+
+def test_gamma_hold_warning_stays_silent_on_gridworld():
+    # No ingest_hold_s declared → the warning has nothing to judge.
+    report = validate_spec(gridworld_spec())
+    assert report.ok
+    assert not any(c.warning for c in report.checks)
+
+
+def test_resolve_only_stops_after_schema_sanity():
+    report = validate_spec(gridworld_spec(), resolve_only=True)
+    assert report.ok, report.summary()
+    assert [c.name for c in report.checks] == ["resolve", "schema_sanity"]
+
+
 def test_bad_ref_fails_resolve():
     report = validate_spec("no.such.module:SPEC")
     assert not report.ok
