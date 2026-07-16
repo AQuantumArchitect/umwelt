@@ -1,0 +1,351 @@
+{
+ "clusters": {
+  "biome:AshPatch": {
+   "bloch": {
+    "coverage": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "drain": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "outcome": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "ripeness": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "yield": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   "purity": 0.03125,
+   "roles": [
+    "coverage",
+    "drain",
+    "outcome",
+    "ripeness",
+    "yield"
+   ]
+  },
+  "biome:FreshwaterSpring": {
+   "bloch": {
+    "coverage": [
+     0.0,
+     0.0,
+     0.188941
+    ],
+    "drain": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "outcome": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "ripeness": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "yield": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   "obs_confidence": {
+    "coverage": 1.0,
+    "outcome": 1.0,
+    "yield": 1.0
+   },
+   "purity": 0.032366,
+   "roles": [
+    "coverage",
+    "drain",
+    "outcome",
+    "ripeness",
+    "yield"
+   ]
+  },
+  "biome:Lanternfall": {
+   "bloch": {
+    "coverage": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "drain": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "outcome": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "ripeness": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "yield": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   "obs_confidence": {
+    "coverage": 1.0,
+    "outcome": 1.0
+   },
+   "purity": 0.03125,
+   "roles": [
+    "coverage",
+    "drain",
+    "outcome",
+    "ripeness",
+    "yield"
+   ]
+  },
+  "biome:StarterForest": {
+   "bloch": {
+    "coverage": [
+     0.0,
+     0.0,
+     0.000164
+    ],
+    "drain": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "outcome": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "ripeness": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "yield": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   "obs_confidence": {
+    "coverage": 1.0,
+    "outcome": 1.0
+   },
+   "purity": 0.03125,
+   "roles": [
+    "coverage",
+    "drain",
+    "outcome",
+    "ripeness",
+    "yield"
+   ]
+  },
+  "biome:TheDemos": {
+   "bloch": {
+    "coverage": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "drain": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "outcome": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "ripeness": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "yield": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   "purity": 0.03125,
+   "roles": [
+    "coverage",
+    "drain",
+    "outcome",
+    "ripeness",
+    "yield"
+   ]
+  },
+  "biome:Village": {
+   "bloch": {
+    "coverage": [
+     0.0,
+     0.0,
+     0.112628
+    ],
+    "drain": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "outcome": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "ripeness": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "yield": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   "obs_confidence": {
+    "coverage": 1.0
+   },
+   "purity": 0.031646,
+   "roles": [
+    "coverage",
+    "drain",
+    "outcome",
+    "ripeness",
+    "yield"
+   ]
+  },
+  "biome:Woodlot": {
+   "bloch": {
+    "coverage": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "drain": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "outcome": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "ripeness": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "yield": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   "obs_confidence": {
+    "coverage": 1.0
+   },
+   "purity": 0.03125,
+   "roles": [
+    "coverage",
+    "drain",
+    "outcome",
+    "ripeness",
+    "yield"
+   ]
+  },
+  "self": {
+   "bloch": {
+    "attention": [
+     0.0,
+     0.0,
+     0.001407
+    ],
+    "quest_momentum": [
+     0.0,
+     0.0,
+     -0.021187
+    ],
+    "standing": [
+     0.0,
+     0.0,
+     0.013054
+    ],
+    "wealth_trend": [
+     0.0,
+     0.0,
+     -0.041973
+    ]
+   },
+   "obs_confidence": {
+    "attention": 1.0,
+    "standing": 1.0,
+    "wealth_trend": 1.0
+   },
+   "purity": 0.062649,
+   "roles": [
+    "attention",
+    "quest_momentum",
+    "standing",
+    "wealth_trend"
+   ]
+  }
+ },
+ "gamma_scale": 1.0,
+ "observes_total": 214,
+ "spec_hash": "21181463515076d4999b97687ed7db9a",
+ "surprise": {
+  "biome_loaded": {
+   "ema": 0.985,
+   "n": 31
+  },
+  "plot_revealed": {
+   "ema": 0.931,
+   "n": 19
+  },
+  "resource_mutated.any": {
+   "ema": 0.284,
+   "n": 89
+  },
+  "resource_mutated.harvest": {
+   "ema": 0.805,
+   "n": 2
+  },
+  "standing_changed": {
+   "ema": 0.12,
+   "n": 59
+  },
+  "terminal_measured": {
+   "ema": 0.983,
+   "n": 7
+  },
+  "terminal_measured.freshness": {
+   "ema": 0.841,
+   "n": 7
+  }
+ }
+}

@@ -58,6 +58,43 @@ but the *sign* completes the taxonomy), with event calibration positive but weak
 flip information). Accumulator ≠ event is now a measured split, pinned in the
 gate.
 
+## E2, first rung ladder measured (2026-07-16, controlled walk)
+
+The WITNESS_GAMMA_SCALE ladder {0.25, 1.0, 4.0} flew as three IDENTICAL
+scripted walks (same checkpoint, same 214 observations, same 8 clusters,
+~5-minute horizon) — only the decay scale varied. Tapes committed at
+`proofs/data/e2_scale*.witness_gauge.json`; scorer is the game repo's
+`hive/gamma_ab.py`.
+
+| gamma scale | surprise (EMA, weighted mean) | decisiveness (mean abs z) | purity |
+|---|---|---|---|
+| 0.25 | 0.4496 | **0.01586** | 0.03560 |
+| 1.00 (shipped) | 0.4437 | 0.00973 | 0.03536 |
+| 4.00 | 0.4384 | 0.00243 | 0.03517 |
+
+Two readings, one conclusion:
+
+1. **Decisiveness is monotonic in retention and the effect is large** — 6.5x
+   from the fastest to the slowest decay, 1.6x from shipped to quarter-speed.
+   Slow-decay fields actually hold a position; fast-decay fields are the
+   near-blank banked fields the fleet kept observing.
+2. **Surprise barely moves** (2.5% spread across a 16x gamma range, and the
+   slight rise at 0.25x is a tiny price for 6.5x decisiveness). On this
+   cadence, retaining beliefs longer does not degrade calibration.
+
+So the shipped 0.02/s **forgets too fast for the seat's cadence** — the
+hypothesis this lane was built to test, now measured. This is consistent with
+E1's law (gamma-star is a cadence property): the play-seat's observation gaps
+are minutes-scale and richly irregular, and the calibrated gamma for that gap
+scale sits below the shipped constant, not above it.
+
+**Honest scope:** this is the *instrument-level* A/B — gauge statistics on a
+deterministic walk, n = 1 walk per rung, one checkpoint, one horizon. The E2
+that stays owed below is the *behavioral* A/B: live LLM runners under variant
+world specs, scored on task progress. The instrument result licenses that
+spend — the ladder moves the needle in exactly one direction, so the
+behavioral experiment has a real difference to detect.
+
 ## What's owed
 
 - E2 (live): decay-variant world specs A/B'd on live LLM runners — success
