@@ -14,8 +14,9 @@ gates world-model learning by `1 − echo·surface`.
 
 Measured on 24 days of real home data: a naive learner credits the system's own lights
 at **10.8×** their true strength and is the only arm to degrade when silenced; the
-tagged learner cuts the bias **79%**. The mechanism is quantum-independent and ships in
-this library as `umwelt.learning.confounding` + `umwelt.learning.learning_router`
+tagged learner cuts the bias **79%**. The mechanism is ordinary graph + echo
+accounting (no Belavkin path required) and ships in this library as
+`umwelt.learning.confounding` + `umwelt.learning.learning_router`
 (mechanism smoke: `proofs/`; the effect-size numbers belong to the origin's real-tape
 run and are not re-claimed from synthetic data — see CLAIMS.md).
 
@@ -25,7 +26,6 @@ Draft: the origin repository, `docs/papers/paper1-causal-self-tagging.md`.
 
 The origin's `docs/WHITEPAPERS.md` tracks three further candidates (the estimator-ladder
 methodology with its negative result; gauge-tracked fibers / provable non-training; the
-Berry-phase process-time decision demo). Each is listed there with its evidence status;
-none is claimed here until its gate is paid. The Berry-phase decision demo's natural
-home is this library's gridworld example (path-topology memory under fog of war) —
-synthetic data, honestly labeled as such.
+geometric-phase process-time decision demo). Each is listed there with its evidence
+status; none is claimed here until its gate is paid. A natural synthetic home for the
+path-topology demo is the gridworld fog example — honestly labeled as such.

@@ -6,6 +6,27 @@ if the two ever disagree, CLAIMS.md wins.
 
 ## [Unreleased]
 
+### Fledgeling core (FL-core Phases 1–5)
+- **Host API** (`umwelt.host`): thin game face — `GameHost.register_world` /
+  `observe` / `intend` / `beliefs` / `step` / `step_turn`; calibrated
+  `Belief(value, confidence)` on the default face (no substrate vectors); η=0 no-op;
+  shadow intents leave no live world side effects (`tests/test_host_api.py`).
+- **Multi-mind** (`WorldSession`): shared classical ground + N private engines,
+  per-observer channel masks, actor-keyed intent logging on the confounding
+  surface (`tests/test_multimind_privacy.py`).
+- **Agency loop** (`umwelt.host.agency_loop`): sub-routines, attention budget,
+  FF pause on surprise/rest, shadow auto-intend only after
+  `PromotionGate.min_successes`, explicit live promotion
+  (`tests/test_agency_loop.py`, `examples/fledgeling_fog/agency_demo.py`).
+- **Fog corridor domain** (`examples/fledgeling_fog/`): public synthetic place
+  graph, tick driver (not solar), host-API demo + freeze bake-off + blank-slate
+  proof (`proofs/fledgeling_fog_blank.py`).
+- **Facet kits** (`umwelt.kits.{fog,attention,market,dream}`): optional cassette
+  + baseline + README honesty; dream path never actuates
+  (`tests/test_facet_kits.py`).
+- Roadmap status: [docs/FLEDGELING_CORE.md](docs/FLEDGELING_CORE.md) (Phase 6
+  host-repo integration still open). Ledger rows in CLAIMS.md.
+
 ### Engine
 - `umwelt.spec.validate` — the deterministic spec gate, one reusable command
   (`python -m umwelt.spec.validate module:ATTR`): topology, strict binding
@@ -13,6 +34,8 @@ if the two ever disagree, CLAIMS.md wins.
   blank boot, a synthetic exercise proving every binding drives the field (driver-
   role bindings exempt — the ingest path routes them out of band), and a save/load
   round-trip. The shadow law is enforced (`shadow=False` fails unless waived).
+- Actor-keyed confounding helpers (`record_actor_intent`, `actor_confounded_now`)
+  extend the graph-derived surface for multi-mind hygiene — they do not replace it.
 
 ### umweltd
 - `spec_path` manifest knob: worlds whose spec module lives outside the installed

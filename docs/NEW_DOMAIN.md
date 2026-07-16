@@ -10,7 +10,13 @@ see the "traps" callouts, each one a real thing that shipped once before it was 
 
 Copy [`examples/gridworld/`](../examples/gridworld) — it is a complete, standalone,
 CI-running domain (spec + vocabulary idioms + a runnable demo + the proof shape) and
-the only example in this repo that is not a fragment. Read its README first.
+the classic new-domain template. Read its README first.
+
+For a **game-shaped** place graph (corridor scouting, tick cadence, shadow claim) that
+already uses the thin host face (`umwelt.host.GameHost` instead of raw
+`engine.ingest` on the happy path), copy
+[`examples/fledgeling_fog/`](../examples/fledgeling_fog) instead — see
+[FLEDGELING_CORE.md](FLEDGELING_CORE.md).
 
 If your domain's vocabulary-registration needs are closer to a sensor-driven world
 (role modes, normalizers, a custom driver), also skim
@@ -79,12 +85,22 @@ save/load round-trip) and exits nonzero with the exact failure named:
 python -m umwelt.spec.validate your_module:SPEC        # add --json for tooling
 ```
 
-Then boot it yourself:
+Then boot it yourself (engine path):
 
 ```python
 from umwelt.boot import build_engine
 engine = build_engine(spec=MY_SPEC)
 result = engine.ingest(sensor_readings={...}, now=t)
+```
+
+Or, for a game/host-facing surface (plain observe / intend / beliefs / step):
+
+```python
+from umwelt.host import GameHost
+host = GameHost()
+host.register_world(MY_SPEC)
+host.observe("scout", "my_channel", 1.0, confidence=1.0, t=t)
+print(host.beliefs("scout"))
 ```
 
 A binding whose `zone` or `role` doesn't exist in your spec raises loudly at direct
@@ -119,4 +135,5 @@ inside coverage windows; a no-event day is an absence, not a zero reading.
 | Running umwelt as a daemon (`umweltd`) | [docs/SERVICE.md](SERVICE.md) |
 | What's proven vs designed vs denied | [CLAIMS.md](../CLAIMS.md) |
 | A complete worked domain | [examples/gridworld/](../examples/gridworld) |
+| Game-shaped fog domain + host API | [examples/fledgeling_fog/](../examples/fledgeling_fog), [FLEDGELING_CORE.md](FLEDGELING_CORE.md) |
 | Vocabulary-registration idiom | [examples/smarthome/](../examples/smarthome) |

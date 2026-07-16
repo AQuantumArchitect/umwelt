@@ -50,8 +50,10 @@ engine.save("engine_state.pkl")               # canonical, hash-stable, diffable
 ```
 
 This is the gate-pinned path: the same construction the proof suite drives. Starting
-your own domain? [docs/NEW_DOMAIN.md](docs/NEW_DOMAIN.md) is the checklist, and
-[examples/gridworld/](examples/gridworld) is a complete one to copy.
+your own domain? [docs/NEW_DOMAIN.md](docs/NEW_DOMAIN.md) is the checklist;
+[examples/gridworld/](examples/gridworld) is the classic template, and
+[examples/fledgeling_fog/](examples/fledgeling_fog) is the game-shaped fog corridor
+that drives the [Fledgeling core](docs/FLEDGELING_CORE.md) host face (`umwelt.host`).
 
 ## Why this exists, and what it's already measured
 
@@ -68,11 +70,11 @@ learner cuts that bias **79%**. Every claim in this README links to a row in
 
 ```
 DomainSpec (a world as data: nodes, roles, bridges, bindings, outputs, drivers)
-    → the belief field         coupled qubit clusters on a graph; evolves continuously
-    → observe = partial collapse   confidence IS measurement strength (η=0 ⇒ provable no-op)
-    → forecast                  the same dynamics run forward; a sensor is a forecast at horizon 0
-    → act                       committed tendrils at the device edge — self-tagged, so the
-                                engine never learns its own reflection as world signal
+    → the belief field         coupled nodes on a graph; state evolves continuously
+    → observe                  partial update scaled by confidence η (η=0 ⇒ no-op)
+    → forecast                 the same dynamics run forward; a sensor is a forecast at horizon 0
+    → act                      committed outputs at the edge — self-tagged, so the
+                               engine never learns its own reflection as world signal
 ```
 
 - **Spec** — a frozen manifest ([docs/SPEC.md](docs/SPEC.md)). A world is data; the
@@ -82,8 +84,10 @@ DomainSpec (a world as data: nodes, roles, bridges, bindings, outputs, drivers)
 - **Field** — each node holds a small belief cluster plus a learnable parameter fiber;
   couplings are learned; the whole mind is one self-describing graph projection
   (`umwelt.projection.graph_state`).
-- **Observe** — a weak measurement. Belief *eases* between sparse reports; it does not
-  snap. A zero-confidence observation provably does nothing ([docs/THEORY.md](docs/THEORY.md)).
+- **Observe** — a confidence-weighted update. Belief *eases* between sparse reports; it
+  does not snap. A zero-confidence observation is a no-op (test-pinned). The optional
+  Belavkin observe path and the η-as-efficiency reading of that path live in
+  [docs/THEORY.md](docs/THEORY.md); the **default** ship path is a classical α-blend.
 - **Forecast** — one learned fuser (the trust web) handles sensor health, forecast
   ensembling, and engine chaining, prior-initialized so day-1 behavior is unchanged
   ([docs/forecasting.md](docs/forecasting.md)).
@@ -101,15 +105,17 @@ poisons its own world model ("we acted, the world changed, so we learned the wor
 that"). The confounding surface is derived entirely from the world graph — an actuator
 confounds exactly the learned roles its state projects onto, no per-device code — and a
 per-channel gate discounts learning by the action's decaying echo. Measured on the origin
-deployment's real data: 10.8× naive self-crediting, cut 79% by tagging. The mechanism is
-quantum-independent (`umwelt.learning.confounding`, `learning_router`;
-[docs/papers.md](docs/papers.md); figure: `docs/figures/deconfound_ab.png`).
+deployment's real data: 10.8× naive self-crediting, cut 79% by tagging. The mechanism
+does not depend on the optional Belavkin path (`umwelt.learning.confounding`,
+`learning_router`; [docs/papers.md](docs/papers.md); figure:
+`docs/figures/deconfound_ab.png`).
 
-**2. Confidence is measurement efficiency — as a theorem, not a convention.** Every
-observation carries η ∈ [0,1]; the update law is a weak quantum measurement in which η=0
-makes the innovation vanish identically. A garbage parse, a flaky sensor, a hedged
-forecast — none can move a belief faster than its admitted confidence allows
-([docs/THEORY.md](docs/THEORY.md), test-pinned).
+**2. Confidence bounds every update.** Every observation carries η ∈ [0,1]; η=0 is a
+provable no-op on the field. A garbage parse, a flaky sensor, a hedged forecast — none
+can move a belief faster than its admitted confidence allows (test-pinned). Formal
+links to weak-measurement efficiency η in the optional filter ladder are in
+[docs/THEORY.md](docs/THEORY.md) — that ladder was measured, and the full Belavkin
+rung **ships OFF** by default.
 
 **3. The trust web — one operator, three problems.** A sensor is a forecast with horizon
 0, so sensor-health rerouting, forecast ensembling, and engine chaining are one learned
@@ -125,11 +131,11 @@ not a promise (figure: `docs/figures/empty_diff_figure.png`).
 decisions, and time are all declarative; the engine ships zero domain vocabulary — a lint
 test fails the build if a domain word ever appears in engine source.
 
-*Further out, honestly hedged:* Berry-phase process-time (path-topology memory — the
-geometry is test-pinned, and the *decision* demo is now delivered on real foreign
-geometry: a harvest gate reading only accumulated γ flips ~6× sooner on a wound path
-than a pole-hugging control, opposite choices at a fixed budget —
-`examples/manifold_game/berry_decision.py`; LIVE decision authority still owed) and
+*Further out, honestly hedged:* geometric-phase (Berry) process-time as path-topology
+memory — geometry is test-pinned, and a *decision* demo on real foreign geometry is
+delivered (a harvest gate reading only accumulated γ flips ~6× sooner on a wound path
+than a pole-hugging control; opposite choices at a fixed budget —
+`examples/manifold_game/berry_decision.py`; LIVE decision authority still owed). Also
 free-energy reward channels (framework shipped; effect sizes owed).
 
 ## The ledger
@@ -163,26 +169,35 @@ are in [docs/FIELD_NOTES.md](docs/FIELD_NOTES.md).
 
 ## What this is not
 
-- Not yet multi-domain in production: one domain (the home) is deployed; the adapters in
-  [examples/](examples/) are designed sketches with synthetic demos owed.
-- "Quantum" always means *classically simulated open-quantum-system dynamics* — and the
-  ablations are mixed: the production estimator is a cumulant closure that beat the full
-  density matrix on economics, and persistence baselines are genuinely hard to beat.
+- Not yet multi-domain in production: the origin home is the long-running deployment;
+  this repo also ships **public synthetic** domains (gridworld, fledgeling fog) and
+  sketches whose live product demos are still owed.
+- Not a quantum computer, not a quantum product pitch. Some substrate modules use
+  open-system / Bloch / Belavkin *formalism*, classically simulated; the default
+  estimator is a classical α-blend (and persistence is hard to beat). See
+  [docs/THEORY.md](docs/THEORY.md) for the measured ladder and the DENIED Belavkin
+  default. The **game-facing host API** (`umwelt.host`) exports calibrated value +
+  confidence only.
 - A 0.x API. The origin deployment remains the source of truth until it imports this
   library and its full gate stays green — that back-port is the 1.0 trigger.
 - Not an ML framework, not an LLM, not a drop-in Kalman replacement.
+- Not the full [Fledgeling](http://www.peripheralarbor.com/fledgeling/) game — see
+  [docs/FLEDGELING_CORE.md](docs/FLEDGELING_CORE.md) for the FL-core path (Phases 1–5
+  in this monorepo; host-repo integration still open).
 
 ## Where this is going
 
 | Domain | Why this engine | Status |
 |---|---|---|
-| [Gridworld bot](examples/gridworld/) | Fog-of-war IS weak measurement; scouting buys η | Proof-gate domain (runs in CI) |
+| [Gridworld bot](examples/gridworld/) | Fog-of-war as partial observation; scouting buys η | Proof-gate domain (runs in CI) |
+| [Fledgeling fog corridor](examples/fledgeling_fog/) | Game-shaped places + scout η; host API + multi-mind + agency demos | FL-core Phases 1–4 (CI synthetic) |
+| [FL facet kits](src/umwelt/kits/) | Optional fog / attention / market / dream baselines | Phase 5 kits (CI synthetic) |
 | [Resilience recommender](examples/resilience-recommender/) | The recommender feedback loop is the 10.8× trap | Sketch |
 | [Butler](examples/butler/) | LLM parses at their honest η; non-training as privacy | Sketch |
 | [Sentiment ↔ market](examples/sentiment-market/) | Trust-web fusion; ships its own baselines | Sketch |
 | [Smart home](examples/smarthome/) | The origin — 18 months live | Deployed (meerkat) |
 | [Mirror](examples/mirror/) | umweltd observing itself through its own API | Live demo (first sitting logged) |
-| [Manifold game](examples/manifold_game/) | A quantum farming game as the second foreign world; its real tapes pay the Berry-decision demo | Real-data replay (runs in CI) |
+| [Manifold game](examples/manifold_game/) | Second foreign world (SpaceWheat); real tapes pay the geometric-phase decision demo | Real-data replay (runs in CI) |
 
 ## The engine as a service
 

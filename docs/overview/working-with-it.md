@@ -31,6 +31,11 @@ of your own, the shape of the work is:
 2. **Point umwelt at it.** Either as a library inside your own application, or as a
    small standalone service (`umweltd`) your application talks to over a plain HTTP
    API — post readings in, read back live beliefs, forecasts, and recommendations.
+   For a **game- or host-facing** embed, prefer the thin `GameHost` face
+   (`umwelt.host`: observe / intend / beliefs / step) so the host only sees calibrated
+   values and confidence, not substrate internals; see
+   [FLEDGELING_CORE.md](../FLEDGELING_CORE.md) and
+   [examples/fledgeling_fog/](../../examples/fledgeling_fog).
 3. **Start in shadow mode.** Watch it decide before it's ever allowed to act on
    anything; promote individual decisions to "live" once you trust them.
 
@@ -91,5 +96,6 @@ Being upfront, in the same spirit as the evidence ledger:
 - *"What exactly would I need to describe to model my domain?"* →
   [docs/SPEC.md](../SPEC.md).
 - *"What does a finished example look like?"* →
-  [examples/gridworld/](../../examples/gridworld) — a complete, working reference
-  domain you can run yourself.
+  [examples/gridworld/](../../examples/gridworld) (classic proof domain) or
+  [examples/fledgeling_fog/](../../examples/fledgeling_fog) (game-shaped corridor +
+  host API).

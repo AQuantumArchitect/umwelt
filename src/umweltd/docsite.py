@@ -256,7 +256,7 @@ def render_doc(slug: str) -> "str | None":
             path = root / rel
             if not path.is_file():
                 return None
-            return _page(title, render_markdown(path.read_text()))
+            return _page(title, render_markdown(path.read_text(encoding="utf-8")))
     return None
 
 
@@ -269,7 +269,10 @@ def export_site(dest: "Path | str") -> "list[str]":
     index = render_index().replace('href="/ui">playground</a> · ', "")
     for slug, _t, _r in DOC_REGISTRY:
         index = index.replace(f'href="{slug}"', f'href="{slug}.html"')
-    (dest / "index.html").write_text(index.replace('href="/docs"', 'href="index.html"'))
+    (dest / "index.html").write_text(
+        index.replace('href="/docs"', 'href="index.html"'),
+        encoding="utf-8",
+    )
     written.append("index.html")
     for slug, _title, _rel in DOC_REGISTRY:
         page = render_doc(slug)
@@ -279,7 +282,7 @@ def export_site(dest: "Path | str") -> "list[str]":
             page = page.replace(f'href="{s2}"', f'href="{s2}.html"')
         page = page.replace('href="/docs"', 'href="index.html"') \
                    .replace('<a href="/ui">playground</a> · ', "")
-        (dest / f"{slug}.html").write_text(page)
+        (dest / f"{slug}.html").write_text(page, encoding="utf-8")
         written.append(f"{slug}.html")
     return written
 
