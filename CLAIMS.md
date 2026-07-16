@@ -102,6 +102,9 @@ Harness: `AQuantumArchitect/septacrypt-core` (e.g. hardening commit `81b2e53`).
 | **Private first-moment snapshots still leak if status meta is ground-derived**: observer-facing mythos/mask/tension must come from belief (or explicit public facts); auto-rumor on LOOK is telepathy. Host multi-mind privacy remains the monorepo pin. | septacrypt-core `observers/beliefs.py` + hardening tests; monorepo `tests/test_multimind_privacy.py` | FOREIGN-HARNESS-MEASURED (consumer); engine privacy PINNED separately |
 | **Out-of-band field kicks break residual-zero replay** unless recorded as typed param/field events (consumer STIR). | septacrypt-core `tests/test_hardening.py::test_stir_and_wait_are_replayable` | FOREIGN-HARNESS-MEASURED (consumer) |
 | Composite world hash / cassette residual **as first-class umweltd or host APIs** | [FIELD_NOTES_SEPTACRYPT.md §4–7](docs/FIELD_NOTES_SEPTACRYPT.md) | EVALUATION OWED (engine/service) |
+| **Knot Ledger as coordination layer** (stamps + certificates + fail-closed commit) is implemented in the consumer and **offered for umwelt/hive attachment** — not yet a monorepo pin. | septacrypt-core `ledger/*`, `world/transaction.py`; [FIELD_NOTES_SEPTACRYPT.md §K](docs/FIELD_NOTES_SEPTACRYPT.md) | DESIGNED / INTEGRATION OWED |
+| **Three-layer split for hive merge**: field (belief) / knot (witnessed history) / chain (multi-party finality over digests only). | [FIELD_NOTES_SEPTACRYPT.md §K.1–K.2](docs/FIELD_NOTES_SEPTACRYPT.md) | DESIGNED |
+| umweltd routes for knot commit/proof/challenge; on-chain `umwelt.knot.anchor.v1` | [FIELD_NOTES_SEPTACRYPT.md §K.2–K.4](docs/FIELD_NOTES_SEPTACRYPT.md) | EVALUATION OWED (service + hive) |
 
 ## 4. DESIGNED / EVALUATION OWED (say so out loud)
 

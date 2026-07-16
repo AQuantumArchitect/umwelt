@@ -10,13 +10,20 @@ engine**, without re-claiming product metrics as monorepo pins.
 
 Septacrypt is **not** a second belief engine. It is a game-runtime integration that
 sits on cumulant clusters, Berry machinery, and (intended) the host/multi-mind face.
-It also built a **Knot Ledger** (typed cassettes, transition certificates, fail-closed
-commits) that umwelt does not own — and should not swallow wholesale. What *should*
-cross back is the discipline.
+
+It also built a **Knot Ledger** — typed cassettes, transition certificates, content-
+addressed stamps, fail-closed commits. That ledger is **in scope for umwelt
+integration**, especially as umwelt merges with a **blockchain-based hive
+coordination surface**. This note therefore does two jobs:
+
+1. Transfer cognition/service *discipline* from the consumer.
+2. Give the core team a **head start on where to connect the Knot Ledger** to
+   engine, daemon, and on-chain hive rails (see §K).
 
 Mythic vocabulary (Septacrypt, Pearls, Holy Dark, Endless Knot) is **domain data in
 the consumer**. Engine source remains domain-free ([CLAIMS.md](../CLAIMS.md) vocabulary
-lint). Do not import lore strings into `src/umwelt/`.
+lint). Do not import lore strings into `src/umwelt/`. The ledger’s *neutral* contracts
+(stamp, certificate, cassette, residual) are fine to host under domain-free names.
 
 ---
 
@@ -98,7 +105,8 @@ Certificates own durable path identity.
 | **Berry vs ledger boundary** | Already correct in spirit ([FLEDGELING_SEPTACRYPT_PLAN.md](FLEDGELING_SEPTACRYPT_PLAN.md)) | Keep BerryTape as process clock; durable branching stays **out** of umwelt or as an optional sidecar contract |
 | **RNG commitment** | Measurement outcomes must be recorded for residual-zero replay | Host measure paths should record `record_z` (or equivalent) in the event log |
 
-**Not an ask:** absorb Knot Ledger into the monorepo. Sibling integration is the plan.
+**Ask:** treat the Knot Ledger as an **optional durable coordination layer** (see §K),
+not as a rewrite of `events.db` or BerryTape.
 
 ---
 
@@ -156,9 +164,207 @@ the long-term product path.
 
 ### Explicit non-goals for the service
 
-- Hosting Knot Ledger DAG as a first-class umweltd feature (keep sibling).
 - Shipping Septacrypt emoji / theology in the daemon.
 - Replacing GameHost with GameSession naming.
+- Replacing `events.db` (ingest log) with the Knot DAG (different job — see §K).
+
+---
+
+## K. Knot Ledger → umwelt → blockchain hive (connection map)
+
+### K.0 What the Knot Ledger *is* (neutral contracts)
+
+Shipped today in septacrypt-core (`src/septacrypt_core/ledger/`, `world/transaction.py`):
+
+| Contract | Meaning |
+|----------|---------|
+| **KnotEvent / cassette** | Ordered, fully serializable ops (measure with `record_z`, world_evolve, set_fields, bridges, report, promote, …) |
+| **TransitionCertificate** | pre/post content hashes, event_digest, residual, tolerance, rng_commitment, replay_cassette, dynamics_version, affected_surface |
+| **KnotStamp** | Content-addressed node: parent_ids, branch_id, berry_coordinate, scale_address, pre/post roots, cert id, truth_mode |
+| **KnotLedger** | CAS append, expected branch head, parent pre==parent post continuity |
+| **CertifiedTransaction** | Fail-closed: working copy → residual replay → cert → stamp → atomic commit, or no mutation |
+
+Honest limits (preserve them):
+
+- pre/post “roots” are **content hashes**, not Merkle trees yet (tree-hash is the
+  natural upgrade for on-chain partial proofs).
+- Berry coordinates are **path signatures**, not causal edges.
+- Symbolic Q3 “weave” paths are **not** certificates.
+
+### K.1 Three layers that must stay distinct
+
+Hive coordination will fail if these get collapsed:
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  C. HIVE / CHAIN  (multi-party coordination surface)        │
+│     commitments, votes, role grants, settlement, forks      │
+│     ← publish: stamp_id, cert_id, hashes, branch tips       │
+│     ← never: full density matrices, raw sensor floods       │
+└──────────────────────────▲──────────────────────────────────┘
+                           │ attest / anchor / challenge
+┌──────────────────────────┴──────────────────────────────────┐
+│  B. KNOT LEDGER  (durable witnessed history)                │
+│     stamps + certificates + branch DAG                      │
+│     “this cassette is dynamically realizable A→D”           │
+└──────────────────────────▲──────────────────────────────────┘
+                           │ bind pre/post to field anchors
+┌──────────────────────────┴──────────────────────────────────┐
+│  A. UMWELT FIELD  (belief / cumulant substrate)             │
+│     DomainSpec, ingest, clusters, BerryTape, host minds     │
+│     events.db + snapshot.pkl + field_canon_hash (umweltd)   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+| Layer | Owns | Does *not* own |
+|-------|------|----------------|
+| **A Field** | Uncertain beliefs, estimation, shadow decisions | Branch identity, multi-party settlement |
+| **B Knot** | Certified segments, branch tips, residual proofs | Full multi-mind estimators (refs only) |
+| **C Hive/chain** | Who may propose/promote, economic/coordination finality | Re-running Belavkin in the EVM |
+
+**BerryTape stays in A.** It indexes process phase / loop geometry.  
+**Knot stays in B.** It indexes durable path identity and branches.  
+**Chain stays in C.** It indexes social/economic finality over *digests* of B.
+
+### K.2 Concrete attachment points in *this* monorepo
+
+#### A — Library / host (cognition)
+
+| Hook | Current artifact | Knot use |
+|------|------------------|----------|
+| `engine.field_canon_hash()` | Byte-stable field commitment | Stamp `pre_state_root` / `post_state_root` (or composite world hash when multi-zone) |
+| `engine.save` / `load` | Checkpoint backend | Materialize A/D anchors; never the only history |
+| `umwelt.events.Event` + SQLite log | Ingest tape | **Source** of raw observations that cassettes may *summarize*; not a substitute for cassettes |
+| `GameHost.observe` / `intend` / `step_turn` | FL host face | Emit or wrap as KnotEvents; promote_routine ↔ shadow→live |
+| `WorldSession` multi-mind | Private engines | Observer id on stamps; reports as typed events; never stamp another mind’s private state as public ground |
+| `AgencyLoop` / tendrils | Shadow-first egress | Promotion events must be ledgered before live dispatch is hive-visible |
+| `BlochGeometricPhase` / `BerryTape` | Process clock | Fill `KnotStamp.berry_coordinate`; never use phase nearness as a parent edge |
+
+#### B — umweltd (service)
+
+Worker contract today ([SERVICE.md](SERVICE.md)):
+
+```text
+events.db  (append-only ingest truth)
+snapshot.pkl + cursor.txt  (cache)
+POST /events → append then ingest
+POST /snapshot → field_canon_hash + cursor
+```
+
+**Recommended extension surface** (design, not implemented here):
+
+```text
+$UMWELTD_HOME/worlds/<name>/
+  events.db              # unchanged — field ingest
+  snapshot.pkl           # unchanged — field cache
+  cursor.txt
+  knot/                  # NEW optional plugin store
+    stamps.db            # or content-addressed objects
+    certs.db
+    branches.json        # branch_id → head stamp_id
+```
+
+HTTP (sketch — keep domain-free names):
+
+| Route | Role |
+|-------|------|
+| `POST /worlds/<n>/knot/commit` | Body: cassette + expected_branch_head → server runs residual against current snapshot path, returns stamp_id + cert or 409 fail-closed |
+| `GET /worlds/<n>/knot/head?branch=` | Branch tip |
+| `GET /worlds/<n>/knot/stamp/<id>` | Stamp + cert digests |
+| `GET /worlds/<n>/knot/proof/<id>` | Compact payload for chain: hashes, digest, residual, dynamics_version |
+| `POST /worlds/<n>/knot/challenge` | Re-verify a published stamp against local replay (hive dispute) |
+
+**Ordering rule (non-negotiable):**
+
+```text
+1) append any raw ingest events that the cassette depends on  (events.db first)
+2) field applies / residual-checks on working state
+3) knot commit (stamp) only if residual OK
+4) optional: publish digest to hive/chain
+5) snapshot field + knot heads together (or knot head points at snapshot cursor)
+```
+
+Never: chain finality before residual. Never: field mutation after a failed cert without explicit typed reanchor.
+
+#### C — Blockchain / hive coordination surface
+
+Publish **only digests and authorizations**, not the field:
+
+```json
+{
+  "schema": "umwelt.knot.anchor.v1",
+  "world_id": "urn:umwelt:world:…",
+  "stamp_id": "stamp_…",
+  "cert_id": "cert_…",
+  "pre_hash": "…",
+  "post_hash": "…",
+  "event_digest": "…",
+  "residual": 0.0,
+  "tolerance": 1e-9,
+  "dynamics_version": "…",
+  "branch_id": "main",
+  "parent_ids": ["stamp_…"],
+  "berry_path_signature": "…",
+  "field_canon_hash": "…",
+  "events_cursor": "iso-ts-or-seq",
+  "proposer": "did:… or agent id",
+  "authorization": "sig or hive vote ref"
+}
+```
+
+| Hive concern | Knot/field binding |
+|--------------|-------------------|
+| **Proposal** | Cassette + expected parent head (off-chain compute, on-chain intent hash) |
+| **Validation** | Any replica with the world snapshot runs residual; posts pass/fail |
+| **Branching** | Parallel `branch_id`s = rival histories; hive chooses tip policy |
+| **Merge** | Requires multi-parent stamp + cert that both parents’ posts are inputs (consumer DAG already has parent_ids; history linearization is separate) |
+| **Role / SI promotion** | On-chain grant references `promote_routine` stamp id + evidence hash |
+| **Settlement** | Pays out on `post_hash` + cert_id, not on a UI narrative string |
+| **Privacy** | Private mind fields never land on-chain; only public ground anchors or encrypted commitments |
+| **Data availability** | Full cassette may live in IPFS/object store; chain holds digests |
+
+**Merkle upgrade path (when hive needs partial proofs):**
+
+1. Keep content-hash stamps working today.  
+2. Replace `generate_state_hash(whole)` with a **state tree** (per-zone / per-role leaves).  
+3. Certificates gain inclusion proofs for `affected_surface` only.  
+4. Chain verifies inclusion + residual claim without full world blob.
+
+### K.3 Reference implementation to lift
+
+Prefer **porting neutral modules** over re-deriving:
+
+| septacrypt-core path | Suggested umwelt home (future) |
+|----------------------|--------------------------------|
+| `ledger/events.py` | `umwelt.knot.events` or `umwelt.history.events` |
+| `ledger/certificate.py` | `umwelt.knot.certificate` |
+| `ledger/dag.py` | `umwelt.knot.ledger` |
+| `ledger/roots.py` | share with field canon hashing utilities |
+| `world/transaction.py` | `umwelt.knot.transaction` (depends on engine snapshot API) |
+| `world/snapshot.py` | bridge to `field_canon_hash` + multi-cluster compose |
+
+Vocabulary lint: keep names **knot / history / certificate / cassette** — not Septacrypt mythos.
+
+Consumer remains the **first product user** of the package; hive is the **second**.
+
+### K.4 Minimal integration sequence (suggested)
+
+1. **Read-only bridge:** umweltd snapshot returns `{field_canon_hash, cursor}` already — document as Knot A/D anchors.  
+2. **Library package:** extract neutral knot types into umwelt (or shared `umwelt-knot` wheel) with residual against `engine` snapshots.  
+3. **Fail-closed host path:** optional `GameHost` flag `certified_steps=True` wraps step_turn in CertifiedTransaction.  
+4. **Daemon knot store:** `knot/` directory + commit/proof routes.  
+5. **Hive adapter:** thin publisher that posts `umwelt.knot.anchor.v1` and listens for challenges → `POST …/knot/challenge`.  
+6. **Merkleization** when partial on-chain proofs become load-bearing.
+
+### K.5 Invariants for hive (copy into hive ADR)
+
+1. Field mutation without a KnotEvent is forbidden in certified mode.  
+2. Chain never re-simulates the cumulant integrator; it verifies digests + optional residual attestations.  
+3. Branch head mismatch → reject (no silent re-anchor).  
+4. Shadow/live promotion is a ledgered event before hive-visible autonomy.  
+5. Private umwelten are not public stamps.  
+6. Berry similarity does not authorize a parent link.  
+7. Mythos/UI strings are never part of the hash preimage for settlement.
 
 ---
 
@@ -193,7 +399,7 @@ Do not delete consumer vocabulary; do not put it in the numerical kernel.
 | Septacrypt | Three-bit state grammar + semantic vocabulary (consumer) |
 | Pearl | Directed state-transition incidence (consumer geometry) |
 | Spirit | Semantic scoring layer (downstream of physics) |
-| Knot | Branchable certified event history (sibling ledger) |
+| Knot | Branchable certified event history (integrate with umwelt + hive; §K) |
 | Berry journey | Gauge-aware trajectory signature (umwelt BerryTape / BlochGeometricPhase) |
 | Endless Knot | Coupled multiscale process graph (product vision) |
 | Holy Dark / `000` | Distinguished null/reference state (consumer lore) |
@@ -210,11 +416,13 @@ Do not “rationalize away” the adapter vocabulary.
 ## 7. Priority order for core team pickup
 
 1. **Document + test multi-cluster atomic turn** (no focus-selected physics).  
-2. **Keep shadow-first / multi-mind privacy defaults obvious** in host + SERVICE docs.  
-3. **Event/cassette residual story** for consumers that re-verify history.  
-4. **Consumer install pin** one-pager.  
-5. **Optional:** world composite hash endpoint for harness acceptance tests.  
-6. **Do not** merge Knot Ledger or Septacrypt lore into `src/umwelt/`.
+2. **Knot attachment ADR** — adopt §K layers; decide package home (`umwelt.knot` vs sibling wheel).  
+3. **umweltd snapshot ↔ stamp anchor** mapping doc (field_canon_hash + cursor).  
+4. **Fail-closed residual API** sketch against engine snapshots (library).  
+5. **Hive digests** — freeze `umwelt.knot.anchor.v1` JSON for the chain team.  
+6. **Keep shadow-first + multi-mind privacy defaults obvious** in host + SERVICE docs.  
+7. **Consumer install pin** one-pager.  
+8. **Do not** put Septacrypt lore into `src/umwelt/`; **do** port neutral knot contracts.
 
 ---
 

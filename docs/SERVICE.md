@@ -8,6 +8,14 @@ git SHA or editable path and treat the daemon as substrate truth — see
 [FIELD_NOTES_SEPTACRYPT.md](FIELD_NOTES_SEPTACRYPT.md) §4–5 for service asks
 (composite world hash, cassette/event batches, snapshot↔checkpoint mapping).
 
+**Knot Ledger + hive (planned attachment):** the field path remains
+`events.db` → ingest → `snapshot.pkl` + `field_canon_hash`. A future optional
+`knot/` store binds **witnessed history** (stamps/certificates) to those anchors
+and publishes **digests only** to a blockchain hive coordination surface.
+Connection map, route sketches, and `umwelt.knot.anchor.v1` JSON live in
+[FIELD_NOTES_SEPTACRYPT.md §K](FIELD_NOTES_SEPTACRYPT.md). Do not collapse chain
+finality into the belief field or replace the ingest log with the stamp DAG.
+
 ## Shape
 
 ```

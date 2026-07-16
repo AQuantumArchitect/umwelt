@@ -63,8 +63,8 @@ Symbolic derivation of the runtime’s 3 / 7 / 12 counts (declared frame, not ph
 |---|---|
 | **Sibling, not rewrite** | Build `septacrypt-core` as a sibling integration repo. Pin umwelt / Architect / SpaceWheat / Fledgeling commits. Do **not** merge monorepos or re-fork the belief substrate. |
 | **umwelt is the belief face** | FL-core Phases 1–5 already ship observe/intend/beliefs/step, multi-mind privacy, agency, and public synthetic kits. Integration **consumes** that API; it does not reimplement it. |
-| **Knot Ledger is new** | Durable stamps, branch DAG, transition certificates, and nonlinear insertion are **not** umwelt features. umwelt save/load is only a checkpoint backend. |
-| **Berry ≠ history** | Berry Tape indexes process phase / loop geometry. Knot Ledger owns durable path identity. Never let geometric nearness mint a causal edge. |
+| **Knot Ledger attaches here** | Durable stamps, branch DAG, transition certificates — first shipped in septacrypt-core; **integrate** with umwelt field anchors + umweltd + (planned) blockchain hive. See [FIELD_NOTES_SEPTACRYPT.md §K](FIELD_NOTES_SEPTACRYPT.md). save/load remains the checkpoint backend for A/D roots. |
+| **Berry ≠ history ≠ chain** | Berry Tape = process phase. Knot Ledger = durable path identity. Hive/chain = multi-party finality over **digests**. Never let geometric nearness mint a causal edge; never re-simulate Belavkin on-chain. |
 | **Spirit ranks, physics gates** | Spirit vectors may rank valid candidates. They never legalize an impossible transition. |
 | **Prove the knot first** | Nested Reactor end-to-end proof before D20 lore, spectral folds, or full Fledgeling product chrome. |
 | **Plain host face** | Game boundary speaks belief/confidence/intent/history — not density matrices or “quantum product” branding. |
