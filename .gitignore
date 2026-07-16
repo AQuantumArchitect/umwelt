@@ -18,3 +18,7 @@ venv/
 *.key
 *secret*
 *credential*
+
+# any ad-hoc venv name (.venv_check, .venv_foo, etc.), not just .venv/venv exactly
+.venv*/
+venv*/
