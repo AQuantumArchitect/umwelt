@@ -54,7 +54,7 @@ def test_engine_source_is_domain_free():
     for path in sorted(SRC.rglob("*.py")):
         rel = path.relative_to(SRC).as_posix()
         allowed = {w.lower() for w in ALLOW.get(rel, set())}
-        for lineno, line in enumerate(path.read_text().splitlines(), 1):
+        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             for m in BANNED.finditer(line):
                 word = m.group(1).lower()
                 if word in allowed:

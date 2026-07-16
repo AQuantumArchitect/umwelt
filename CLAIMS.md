@@ -68,6 +68,23 @@ in [docs/FIELD_NOTES.md](docs/FIELD_NOTES.md).
 | **The dissipative-role law**: a role fed only one polarity of evidence saturates if declared unitary (dephasing never relaxes populations — every belief pinned at z ≈ +0.95 for 13 days, scores riding 4th-decimal ripples under an inverted sign). Declaring the role dissipative (evidence lands hard, relaxes toward uncertainty on a learnable timescale) restored real dynamics and the natural sign. The synthetic proof gate is structurally blind to this: the gridworld feeds both polarities. | [docs/FIELD_NOTES.md §1](docs/FIELD_NOTES.md) | FOREIGN-MEASURED |
 | **Topology growth found true structure on real data**: driven per batch over a blank growth replay, the learned-topology machinery grew 7 couplings within the first 36 h of world-time and pruned none over 11 days — every edge independently corroborated by offline co-movement statistics and by engine-free transition counts. Replay, not live: the live win stays owed in the tier below. | [docs/FIELD_NOTES.md §5](docs/FIELD_NOTES.md) | FOREIGN-MEASURED |
 
+## 3b. MEASURED ON THE FIRST CONSUMER HARNESS (umwelt-market — foreign domain, 2026-07)
+
+The extracted engine's first *public* foreign world: daily US equities with three
+free sentiment feeds (GDELT / HN / Wikipedia), two disjoint years, blank replay
+through the production ingest path. Full tables live in the harness repo
+(`AQuantumArchitect/umwelt-market`); rows below are the transferable engine
+findings only.
+
+| claim | evidence | status |
+|---|---|---|
+| **Trust-web LOO has a wild boundary**: with three mutually near-orthogonal daily feeds (\|r\| ≲ 0.27), leave-one-out isolation never engaged — a corrupted feed's reliability stayed comparable to peers. Synthetic isolation pin (tier 1) holds; correlated peers are required for LOO to assign blame. | umwelt-market RESULTS.md trust-web + CLAIMS §2; engine pin `tests/test_trust_web_isolation.py` | FOREIGN-HARNESS-MEASURED |
+| **Free-run rollouts are rank-preserving at daily×hourly-hold cadence**: `FieldRolloutForecaster` h=1..5 sessions matched hold-the-last-belief to ~0.001 direction AUC both periods (24–120 hold units). Multi-day direction surface ≈ hold, not re-ranked free-run. | umwelt-market RESULTS_S2.md E-2 | FOREIGN-HARNESS-MEASURED |
+| **Membrane cadence earned its keep on market data**: burst-vs-`ingest_hold_s` A/B was equivalent-or-better for comprehension; starvation without either collapsed (harness Q1). | umwelt-market RESULTS.md burst-vs-hold; engine pin `tests/test_wall_pacing.py` | FOREIGN-HARNESS-MEASURED |
+| Fused-confidence collapse ↛ next-session \|return\|; Berry phase-rate ↛ trending/choppy filter at daily n (both pre-registered negatives). Re-tests owed on denser cadence. | umwelt-market RESULTS_S2.md E-1/E-3 | FOREIGN-HARNESS-MEASURED, NEGATIVE |
+
+Brief: [umwelt-market `docs/ENGINE_ASKS_2026-07-15.md`](https://github.com/AQuantumArchitect/umwelt-market/blob/main/docs/ENGINE_ASKS_2026-07-15.md).
+
 ## 4. DESIGNED / EVALUATION OWED (say so out loud)
 
 | claim | evidence | status |
