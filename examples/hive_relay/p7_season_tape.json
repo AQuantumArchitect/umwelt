@@ -1,0 +1,35 @@
+{
+  "season": "P7 — the country chapters proven (SpaceWheat, 2026-07-15..16)",
+  "protocol": "haiku-class agents at a text-parity seat; coordinator verifies EVERY headline claim against a save-file manifest (grep for fired story flags + signature contents) before belief update; hive ticks filed as (claim, truth, accurate)",
+  "aggregate": {
+    "lanes": {
+      "L1 fresh→lumber_flows": {"legs": 15, "outcome": "PROVEN"},
+      "L2 spring chapter": {"legs": 14, "outcome": "PROVEN (first vocabulary claim by a haiku)"},
+      "L3 mill→chain_flipped": {"legs": 4, "outcome": "PROVEN (witness-hold chapter)"},
+      "L4 act-4 hub": {"legs": 6, "outcome": "PROVEN (first haiku incorporations of new words)"}
+    },
+    "headline_claim_error_rate_note": "consistent with the 07-14 relay: roughly half of unverified headline claims were wrong in one direction or the other; both over- and under-claims occur; every wrong report was fluent and confident"
+  },
+  "case_files": [
+    {"leg": "L1l/L1m", "claim": 1, "truth": 0, "class": "roadmap-as-history", "note": "read the story tab's trajectory (future beats) as fired beats"},
+    {"leg": "L1o", "claim": 0, "truth": 1, "class": "under-claim", "note": "the target flag HAD fired; the agent did not notice its own breakthrough"},
+    {"leg": "L2d", "claim": 1, "truth": 0, "class": "intent-as-outcome + resource-as-knowledge", "note": "listed an ACCEPTED contract as a fired beat; equated wallet emoji with taught vocabulary"},
+    {"leg": "L2e", "claim": null, "truth": null, "class": "coordinator-error", "note": "the COORDINATOR misdiagnosed a wall (compass pressure 'dead'); a builder refuted it with measurement (88% odds alive; the loss was a 0.7% RNG tail) — referees referee the referee"},
+    {"leg": "L3c", "claim": 0, "truth": 0, "class": "honest-wall", "note": "held a quantum state blind (no probability feedback) and succeeded anyway; verdict: the chapter asked for eyes, not a bigger model — the north_pct channel was added and the next leg called it 'a powerful guide'"},
+    {"leg": "L3d", "claim": 1, "truth": 1, "class": "clean", "note": "act 3 completed; manifest confirmed every beat"},
+    {"leg": "L4a", "claim": 0, "truth": 0, "class": "score-as-progress", "note": "quest bar rendered a sigmoid soft-gate score as a percent: at 13/15 icons it read 9%; agent concluded it held 1-2 and gave up. Channel repair: live N/M counts in the gloss"},
+    {"leg": "L4b", "claim": 0, "truth": 0, "class": "honest-wall → channel bug", "note": "microscope stamped every icon 'known ✓' — ownership check was single-emoji keyed under duplicate emojis, plus a Unicode variation-selector schism split '❄'/'❄️' into different addresses. Two channel repairs; the world then showed six honest unknowns"},
+    {"leg": "L4c", "claim": 0, "truth": 0, "class": "honest-wall → engine bug", "note": "wall report so precise ('empty:true confirmed, plant refused, capacity 6') the fix was a five-minute grep: trim never reseeded the viz layout the capacity gate reads"},
+    {"leg": "L4d", "claim": 1, "truth": 0, "class": "POISONED CHANNEL", "note": "the game itself toasted '🧬 woven into your signature' over words a silent uniqueness rule had refused; the agent read an honest channel reading of a dishonest channel, was congratulated twice, reported 15/15 while the save held 13. NOT agent confabulation — channel deception"},
+    {"leg": "L4e", "claim": 1, "truth": 1, "class": "clean", "note": "hub beats fired; signature 13→15 by incorporation; manifest confirmed all four flags"},
+    {"leg": "L4f", "claim": 0, "truth": 0, "class": "honest-wall → ergonomic trap", "note": "F is a track TOGGLE; polling ripeness with F destroys the loop — second fleet lost to the same reflex despite a warning toast; the warning moved into the quest bar where the ritual is learned"}
+  ],
+  "channel_repairs": [
+    {"sense": "focus (which plot verbs act on)", "priced_by": "L1e wall"},
+    {"sense": "words (axis glyphs on revealed plots)", "priced_by": "L1i wall"},
+    {"sense": "gaps (plantable columns flagged empty)", "priced_by": "L2 walls"},
+    {"sense": "state (live north probability)", "priced_by": "L3c blind hold"},
+    {"sense": "microscope (per-plot poles/purity/lineage/entanglement, word-accurate ownership)", "priced_by": "owner directive + L4b wall"},
+    {"sense": "quest ledger (commitments readable by sensors)", "priced_by": "QA save/load audit"}
+  ]
+}
