@@ -1528,14 +1528,23 @@ class FractalStack:
             scale._prev_z = sd.get("prev_z", {})
             scale._surprise_ema = sd.get("surprise_ema", 0.0)
 
+            # One param stamp for every bundle below. Prefer the full-precision
+            # fields (`value_exact`/`sigma_exact`) — the rounded display values
+            # are lossy, and a 6-decimal round-off in a restored H coefficient
+            # forks an otherwise deterministic replay (the 2026-07-18
+            # lease-drill chain fork's second cause). Legacy checkpoints
+            # without the exact fields fall back to the rounded ones.
+            def _stamp(param, pdata):
+                param.value = pdata.get("value_exact", pdata.get("value", param.value))
+                param.sigma = pdata.get("sigma_exact", pdata.get("sigma", param.sigma))
+                param.update_count = pdata.get("updates", 0)
+
             # Restore learnable params
             params_snap = sd.get("params", {})
             for name, pdata in params_snap.get("params", {}).items():
                 param = scale.params.get_param(name)
                 if param is not None:
-                    param.value = pdata.get("value", param.value)
-                    param.sigma = pdata.get("sigma", param.sigma)
-                    param.update_count = pdata.get("updates", 0)
+                    _stamp(param, pdata)
             # (legacy "berry_phase" in old checkpoints is ignored — the real
             # geometric phase now lives on the Bloch trajectory, not bundles.)
 
@@ -1560,9 +1569,7 @@ class FractalStack:
                     for pname, pdata in bdata.get("params", {}).items():
                         param = bundle.get_param(pname)
                         if param is not None:
-                            param.value = pdata.get("value", param.value)
-                            param.sigma = pdata.get("sigma", param.sigma)
-                            param.update_count = pdata.get("updates", 0)
+                            _stamp(param, pdata)
 
             # Restore bridge coupling coefficients
             for key_str, bdata in sd.get("bridge_bundles", {}).items():
@@ -1576,9 +1583,7 @@ class FractalStack:
                 for pname, pdata in bdata.get("params", {}).items():
                     param = bundle.get_param(pname)
                     if param is not None:
-                        param.value = pdata.get("value", param.value)
-                        param.sigma = pdata.get("sigma", param.sigma)
-                        param.update_count = pdata.get("updates", 0)
+                        _stamp(param, pdata)
 
         # Re-project H from loaded meta-field states (deterministic — no sampling)
         for i in range(len(self.scales) - 1, -1, -1):

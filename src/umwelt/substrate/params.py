@@ -130,11 +130,19 @@ class ScalarParam:
         self.update_count = 0
 
     def snapshot(self) -> dict:
-        """Serializable state for logging/API."""
+        """Serializable state for logging/API — AND the persistence record the
+        fractal stack round-trips. The rounded fields are the display surface;
+        `value_exact`/`sigma_exact` carry full precision so a restore is
+        bit-exact (a 6-decimal round-off in a restored H coefficient is enough
+        to fork an otherwise deterministic replay — the 2026-07-18 lease-drill
+        lesson). Loaders prefer the exact fields, falling back to the rounded
+        ones on legacy checkpoints."""
         return {
             "name": self.name,
             "value": round(self.value, 6),
             "sigma": round(self.sigma, 6),
+            "value_exact": float(self.value),
+            "sigma_exact": float(self.sigma),
             "prior_mean": round(self.prior_mean, 6),
             "drift": round(self.drift_from_prior(), 3),
             "updates": self.update_count,

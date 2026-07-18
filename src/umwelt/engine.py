@@ -1303,9 +1303,16 @@ class BeliefEngine:
         # to self.tendrils with no new ingest block (P3 builds them from OutputSpec). See
         # membranes/tendril.py.
         if _agency_acting:
+            # Tendrils tick in EVENT time (the batch's `now`), wall clock only as
+            # the no-timestamp fallback. Wall clock here made the rate-limit gate
+            # replay-speed-dependent: a from-log replay compresses hours into
+            # seconds, so its dispatch pattern (and everything a dispatch feeds)
+            # diverged run-to-run — the deterministic-replay contract leaked
+            # (found root-causing the 2026-07-18 lease-drill chain fork).
+            _tendril_now = now.timestamp() if now is not None else None
             for tendril in getattr(self, "tendrils", []):
                 try:
-                    auto_action = tendril.step()
+                    auto_action = tendril.step(_tendril_now)
                     if auto_action is not None:
                         actions = actions + [auto_action]
                 except Exception as e:
@@ -1699,6 +1706,17 @@ class BeliefEngine:
             _canon_hash = None                 # non-training (clock-tape gauge ↔ git). Best-effort; never fatal.
         data = {
             "field_canon_hash": _canon_hash,
+            # Global RNG stream positions AT THE SNAPSHOT CURSOR. The replay path
+            # consumes the process-global `random` stream (qubit_param/params
+            # Thompson samples, surprise-tape reservoir draws), so an incremental
+            # boot (snapshot + log tail) can only reproduce a from-log replay's
+            # field_canon_hash if the stream resumes exactly where the snapshot
+            # left it — the 2026-07-18 lease-drill chain fork. numpy's stream was
+            # measured NOT to move during replay; it rides along as a guard.
+            "rng_state": {
+                "random": random.getstate(),
+                "numpy": np.random.get_state(),
+            },
             # Snapshot format version + the feature geometry this brain exposes
             # (self-describing; lets a loader spot a topology mismatch — the
             # LAUNCH-RULE guard). v1 = legacy/unversioned. Origin-era keys that
@@ -1776,6 +1794,17 @@ class BeliefEngine:
             # Agency qubit (act↔listen) — so the weekly heal survives a restart, not just the
             # persisted silence scalar (which only restores the on/off, not the decay position).
             "agency": self.agency.state() if getattr(self, "agency", None) is not None else None,
+            # Egress tendril continuation state (commit qubit + dispatch memory + learned
+            # rise/fall geometry). A tendril's committed level feeds back into the tick's
+            # learning surface, so continued evolution after a load only matches a
+            # never-stopped run when this rides the snapshot — measured on the 2026-07-18
+            # lease-drill chain fork (an incremental evolve forked from the from-log
+            # referee on its FIRST tail batch until tendril state was restored).
+            "tendrils": {
+                t.name: t.state_dict()
+                for t in (getattr(self, "tendrils", None) or [])
+                if hasattr(t, "state_dict")
+            },
         }
         with open(path, "wb") as f:
             pickle.dump(data, f)
@@ -1865,6 +1894,38 @@ class BeliefEngine:
         self.clock_skill = dict(data.get("clock_skill", {}))
         _clt = data.get("clock_last_target")
         self._clock_last_target = dict(_clt) if isinstance(_clt, dict) else {}
+
+        # Egress tendrils: restore the committed actuation qubits + dispatch memory
+        # (matched by name; absent block = older snapshot = tendrils keep their boot
+        # seed, exactly the pre-fix behavior).
+        _tstates = data.get("tendrils") or {}
+        for t in (getattr(self, "tendrils", None) or []):
+            st = _tstates.get(getattr(t, "name", None))
+            if st and hasattr(t, "load_state_dict"):
+                try:
+                    t.load_state_dict(st)
+                except Exception as e:
+                    logger.warning("tendril state restore failed for %s: %s", t.name, e)
+
+        # Resume the global RNG streams at the snapshot's cursor — LAST, so any
+        # RNG a restore step above consumed cannot shift the resumed position.
+        # This is what lets a snapshot + log-tail boot land on the same
+        # field_canon_hash as a from-log replay (the packet referee's contract).
+        rng = data.get("rng_state")
+        if rng:
+            try:
+                random.setstate(rng["random"])
+                np.random.set_state(rng["numpy"])
+                logger.info("Global RNG streams resumed at the snapshot cursor")
+            except (KeyError, TypeError, ValueError) as e:
+                logger.warning("rng_state restore failed (%s) — streams keep "
+                               "their current position", e)
+        else:
+            logger.warning(
+                "LEGACY snapshot: no rng_state — global RNG streams keep their "
+                "seed-once position, so an incremental replay from this snapshot "
+                "is NOT guaranteed to reproduce a from-log replay's "
+                "field_canon_hash (referee such chains from the log alone)")
 
         logger.info("Engine state loaded from %s (%d steps)", path, self._step)
 

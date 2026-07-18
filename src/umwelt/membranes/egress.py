@@ -237,6 +237,37 @@ class SpecTendril(Tendril):
             "last_dispatch_ts": self._last_dispatch_ts,
         }
 
+    # ── persistence (the engine snapshot's tendril block) ────────────────────────
+    def state_dict(self) -> dict:
+        """Full-precision continuation state: the commit qubit + dispatch memory +
+        learned rise/fall geometry — everything a resumed engine needs for its next
+        tendril tick to be bit-identical to a never-stopped one. Measured to matter:
+        without this block an incremental boot (snapshot + log tail) forks from a
+        from-log replay on its first tail batch (the 2026-07-18 lease-drill chain
+        fork's third cause, after RNG stream position and param display-rounding)."""
+        return {
+            "commit_mats": self.commit.cluster.state_matrices(),
+            "last_command": self._last_command,
+            "last_level": self._last_level,
+            "last_dispatch_ts": self._last_dispatch_ts,
+            "last_override_ts": self._last_override_ts,
+            "coupling": float(self.coupling),
+            "decay": float(self.decay),
+        }
+
+    def load_state_dict(self, data: dict) -> None:
+        mats = data.get("commit_mats")
+        if mats:
+            self.commit.cluster.load_matrices(mats)
+        self._last_command = data.get("last_command")
+        self._last_level = data.get("last_level")
+        self._last_dispatch_ts = data.get("last_dispatch_ts")
+        self._last_override_ts = data.get("last_override_ts")
+        if data.get("coupling") is not None:
+            self.coupling = float(data["coupling"])
+        if data.get("decay") is not None:
+            self.decay = float(data["decay"])
+
 
 def build_tendrils(engine, spec) -> list[SpecTendril]:
     """Every OutputSpec in the spec becomes a live tendril on the engine's uniform

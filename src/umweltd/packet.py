@@ -37,7 +37,7 @@ CLI:
     python -m umweltd.packet winner  --world DIR [--grace 0]
     python -m umweltd.packet evolve  --world DIR --node N [--until-ts ISO]
                                      [--freeze-learning] [--grace 90]
-                                     [--no-sync-confirm]
+                                     [--no-sync-confirm] [--from-log]
     python -m umweltd.packet verify  --world DIR --node N [--freeze-learning]
                                      [--hearth-url URL --hearth-key KEY
                                       --hearth-world hive-ops]
@@ -158,9 +158,29 @@ def winner(bids: list[dict], now: datetime | None = None,
     return live[0][1]
 
 
+MAX_PRIOR_RELEASES = 20
+
+
 def write_bid(world: Path, node: str, purpose: str, ttl: int,
               until_ts: str | None, from_cursor: str,
               freeze_learning: bool) -> dict:
+    # A fresh bid must not ERASE this node's completed history: the lease file is
+    # the node's slice of the artifact ledger, and overwriting `release` with None
+    # used to keep at most one release per node. The previous release (and any
+    # accumulated history) rides forward in `prior_releases`, newest last, capped.
+    prior_releases: list[dict] = []
+    p = lease_path(world, node)
+    if p.exists():
+        try:
+            old = json.loads(p.read_text())
+        except (json.JSONDecodeError, OSError) as exc:
+            logger.warning("unreadable prior bid %s: %r (history dropped)", p.name, exc)
+        else:
+            prior_releases = [r for r in old.get("prior_releases") or []
+                              if isinstance(r, dict)]
+            if isinstance(old.get("release"), dict):
+                prior_releases.append(old["release"])
+            prior_releases = prior_releases[-MAX_PRIOR_RELEASES:]
     bid = {
         "node": node,
         "purpose": purpose,
@@ -173,10 +193,11 @@ def write_bid(world: Path, node: str, purpose: str, ttl: int,
             "freeze_learning": bool(freeze_learning),
         },
         "release": None,
+        "prior_releases": prior_releases,
     }
     d = lease_dir(world)
     d.mkdir(parents=True, exist_ok=True)
-    lease_path(world, node).write_text(json.dumps(bid, indent=1))
+    p.write_text(json.dumps(bid, indent=1))
     return bid
 
 
@@ -303,6 +324,14 @@ def boot_engine(world: Path, *, freeze_learning: bool, until_ts: str | None,
     # switch, worker.py's pin_rngs). Deterministic evolution is what makes a
     # second node's --verify-only referee possible at all; a live worker may
     # leave this off, a packet may not.
+    #
+    # Seed-once is only HALF the determinism story: the replay path consumes the
+    # global `random` stream, so an incremental boot (snapshot + tail) must also
+    # RESUME the stream at the snapshot's cursor — engine.load restores the
+    # rng_state the snapshot carries (engine.save persists it). A legacy snapshot
+    # without rng_state falls back to this seed-once position with a loud
+    # warning; such chains referee only from the log (evolve --from-log once to
+    # mint a state-carrying snapshot).
     import random
 
     import numpy as np
@@ -415,8 +444,15 @@ def cmd_evolve(a) -> int:
         return 3
 
     orphan_check(world, last_release(world))
+    # --from-log: ignore the snapshot and rebuild from the log alone (slower,
+    # always safe). The honest way to continue a chain whose snapshot predates
+    # rng_state (a LEGACY snapshot cannot resume the global RNG streams, so an
+    # incremental leg on top of it forks from the from-log referee); the
+    # snapshot this run writes carries rng_state, and the chain is incremental
+    # again from here on.
     engine, last_ts, batches = boot_engine(
-        world, freeze_learning=a.freeze_learning, until_ts=a.until_ts)
+        world, freeze_learning=a.freeze_learning, until_ts=a.until_ts,
+        from_log_only=a.from_log)
 
     # Write-order law: snapshot -> cursor -> sync-confirm -> release. A reader that
     # sees the release can trust the pair; a crash before the release leaves an
@@ -454,6 +490,11 @@ def cmd_verify(a) -> int:
     if not rel:
         print(json.dumps({"verified": False, "reason": "no release to verify"}))
         return 2
+    # Spec: EVERY boot runs the orphan check — verify included. The referee
+    # replays from the log anyway, but a crashed/partially-synced writer's
+    # snapshot must not linger for the NEXT booter; quarantine it exactly the
+    # way evolve does, then proceed from-log.
+    orphan_check(world, rel)
     freeze = a.freeze_learning if a.freeze_learning is not None \
         else bool(rel.get("freeze_learning"))
     snap_sha = _sha256(WorldDir(world).snapshot_path) \
@@ -537,6 +578,10 @@ def main(argv=None) -> int:
 
     p = sub.add_parser("evolve", help="run one evolve-packet under the lease")
     common(p)
+    p.add_argument("--from-log", action="store_true",
+                   help="ignore the snapshot; rebuild from the log alone (mints a "
+                        "fresh rng_state-carrying snapshot — use once to continue "
+                        "a legacy chain)")
     p.add_argument("--until-ts", default=None)
     p.add_argument("--ttl", type=int, default=DEFAULT_TTL_SECS)
     p.add_argument("--freeze-learning", action="store_true")
