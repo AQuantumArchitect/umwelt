@@ -358,6 +358,16 @@ class QubitCluster:
         """Dict of role → Bloch vector for all qubits."""
         return {role: self.qubit_bloch(i) for role, i in self.role_index.items()}
 
+    def role_gauge(self, role: str) -> tuple[float, float]:
+        """(value, confidence) for a role in ONE read — the calibrated belief and
+        how settled it is. value = (z+1)/2 ∈ [0,1]; confidence = Bloch radius |r| ∈
+        [0,1] (1=pure/certain, 0=maximally mixed/unknown). This is the one accessor
+        every readout should reach for instead of hand-rolling z; it makes belief
+        certainty a first-class, uniform coordinate wherever a cluster is read."""
+        from umwelt.substrate.bloch import bloch_radius
+        x, y, z = (float(v) for v in self.role_bloch(role))
+        return (z + 1.0) / 2.0, bloch_radius(x, y, z)
+
     # ================================================================
     # SubstrateBackend contract — the field goes through these instead of
     # reaching into the dense `.rho` directly (substrate.py).
