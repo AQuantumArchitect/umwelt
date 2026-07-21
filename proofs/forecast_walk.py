@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 
 from examples.gridworld.world import (
@@ -70,6 +71,44 @@ def build_forecast_trace(*, days: float = 5.0, seed: int = 7, rows: int = 3, col
     return trace, n, engine
 
 
+def build_filmstrip(*, out_dir: str, frames: int = 24, days: float = 6.0, seed: int = 7,
+                    rows: int = 3, cols: int = 3,
+                    horizons_min=(55.0, 89.0, 144.0, 233.0)) -> int:
+    """Replay the same walk but export `frames` cognifold-trace SNAPSHOTS taken DURING the
+    replay (evenly spaced by batch), as frame_000.json … — the belief-field evolving over
+    time. Early frames catch beliefs still forming and forecasts not yet matured (empty
+    ladders); later frames show the field settling and the self-forecast ladders appearing
+    and sharpening. SpaceWheat's CognifoldTraceView plays these back (SW_COGNIFOLD_TRACE_DIR)
+    so the instrument becomes LIVE — you watch a mind think and anticipate itself. Returns the
+    number of frames written."""
+    spec = gridworld_spec(rows, cols)
+    engine = build_engine(spec=spec, population=False, role=ContextState.replay(dt_factor=10.0))
+    cells = [n.name for n in spec.nodes if n.name.startswith("cell_")]
+    leaves = tuple((c, "agent_near") for c in cells) + tuple((c, "resource") for c in cells)
+    engine.forecast_surface = ForecastSurface(leaves=leaves, horizons_min=tuple(horizons_min))
+
+    walk = agent_walk(rows, cols, seed=seed, days=days)
+    batches = list(runner_batches(synthesize_rows(spec, walk, seed=seed)))  # materialize to count
+    total = len(batches)
+    marks = sorted({min(total, int(round((k + 1) * total / frames))) for k in range(frames)})
+    mark_set = set(marks)
+
+    os.makedirs(out_dir, exist_ok=True)
+    state = {"written": 0}
+
+    def _on_batch(n, item, _result):
+        engine.forecast_surface.step(item[1], engine.field)
+        if n in mark_set:
+            trace = cognifold_trace(engine, world="gridworld")
+            with open(os.path.join(out_dir, f"frame_{state['written']:03d}.json"),
+                      "w", encoding="utf-8") as f:
+                json.dump(trace, f, ensure_ascii=False)
+            state["written"] += 1
+
+    BrainRunner(engine).replay(iter(batches), on_batch=_on_batch)
+    return state["written"]
+
+
 def summarize(trace: dict) -> dict:
     """Honest readout: how much of the ladder actually populated, and the skill spread."""
     regs = trace.get("registers", [])
@@ -100,10 +139,23 @@ def main(argv=None) -> int:
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--horizons", type=str, default="55,89,144,233",
                     help="comma-separated forecast horizons in minutes (Fibonacci by default)")
-    ap.add_argument("--out", type=str, default="", help="write the trace JSON here")
+    ap.add_argument("--out", type=str, default="", help="write the (single) trace JSON here")
+    ap.add_argument("--filmstrip", type=int, default=0,
+                    help="if >0, export this many trace snapshots DURING the replay")
+    ap.add_argument("--out-dir", type=str, default="",
+                    help="directory for --filmstrip frames (frame_000.json …)")
     args = ap.parse_args(argv)
 
     horizons = tuple(float(x) for x in args.horizons.split(",") if x.strip())
+
+    if args.filmstrip > 0:
+        if not args.out_dir:
+            ap.error("--filmstrip requires --out-dir")
+        written = build_filmstrip(out_dir=args.out_dir, frames=args.filmstrip,
+                                  days=args.days, seed=args.seed, horizons_min=horizons)
+        print(f"[forecast_walk] wrote {written} filmstrip frames to {args.out_dir}", file=sys.stderr)
+        return 0
+
     trace, n, _engine = build_forecast_trace(days=args.days, seed=args.seed, horizons_min=horizons)
     stats = summarize(trace)
     print(f"[forecast_walk] replayed {n} batches over {args.days} days", file=sys.stderr)
