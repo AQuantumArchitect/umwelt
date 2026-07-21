@@ -91,7 +91,10 @@ def test_envelope_shape_and_format():
                     "purity", "value", "confidence", "reliability", "forecast_skill",
                     "forecast")).issubset(r)
         assert r["value"] == r["p0"] and r["confidence"] == r["r_bloch"]
-        assert 0.0 <= r["p0"] <= 1.0 and 0.0 <= r["r_bloch"] <= 1.0 + 1e-9
+        # Bloch coords carry the engine's evolution FP drift; match the repo's ±1e-6 bound
+        # convention (see tests/test_spec_to_field.py: `abs(v) <= 1.0 + 1e-6`). The export is a
+        # faithful pure transform — it does NOT clamp, so the test tolerates the same drift.
+        assert -1e-6 <= r["p0"] <= 1.0 + 1e-6 and 0.0 <= r["r_bloch"] <= 1.0 + 1e-6
         assert isinstance(r["forecast"], list)
 
 
