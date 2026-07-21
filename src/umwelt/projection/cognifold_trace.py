@@ -1,0 +1,252 @@
+"""cognifold_trace — the belief-field as a renderable Bloch atlas (reasoning-transparency export).
+
+Where `graph_state` projects the whole legible graph for a web console, this projection emits the
+*bulk full-gauge* readout a 3D field renderer wants: one flat list of belief REGISTERS, each carrying
+its Bloch spherical coordinates plus the unified gauge (value/confidence/reliability/forecast_skill),
+wired by the couplings that already exist. A separate renderer (SpaceWheat's 3D cognifold field, which
+reads per-register Bloch spherical coords) draws it directly — turning the belief-field into an
+instrument you can watch reason.
+
+It COMPOSES the existing cheap reads — it invents no new physics:
+
+  • geometry — a pure Bloch-Cartesian→spherical transform of each leaf's own Bloch vector
+    (`cluster.role_bloch(role)`), through the repo's `substrate.bloch` atlas so it stays consistent
+    with every other chart. `r_bloch` IS the confidence coordinate; `purity` is the PER-REGISTER
+    single-qubit form (1+|r|²)/2 (NOT the cluster's joint Tr(ρ²)).
+  • gauge    — `reliability` + `forecast_skill` ride in from `host.api.beliefs()` (the canonical unified
+    gauge); both may be `null` (a never-observed leaf / no forecaster attached).
+  • forecast — per leaf, the fractal horizon ladder from an attached `ForecastSurface.predictions()`,
+    else empty (the default: `DEFAULT_FORECAST_LEAVES` is empty, so a domain-free world has no leaves).
+  • edges    — the couplings that already exist, re-voiced onto register indices: cross-cluster
+    `graph.bridges` (kind "bridge"), and intra-cluster `zz`/`xy` from `transparency.model_snapshot`
+    (kinds "zz"/"xy"). There is NO quantum mutual information today, so none is invented.
+
+Additive + cheap: O(1) reads only, never `engine.context()`. Degrades to an empty-but-valid envelope
+on a broken/foreign engine rather than raising. See projection/graph_state.py, host/api.py, bloch.py.
+"""
+from __future__ import annotations
+
+import math
+from typing import Any
+
+from umwelt.projection import transparency as _transparency
+from umwelt.projection.graph_state import _graph as _resolve_graph
+from umwelt.substrate.backend import is_param_fiber
+from umwelt.substrate.bloch import bloch_radius, qubit_purity
+
+FORMAT = "cognifold_trace_v1"
+_EPS = 1e-12
+
+
+# ── the pure geometry (a single register's chart) ─────────────────────────────
+
+def register_geometry(x: float, y: float, z: float) -> dict:
+    """Pure Bloch-Cartesian (x,y,z) → the register's spherical + gauge geometry.
+
+    Inverse-consistent with the `substrate.bloch` atlas: `r_bloch = |r|` is the confidence
+    coordinate, `purity = (1+|r|²)/2` is the single-qubit form (per-register, recomputed from THIS
+    leaf's radius — never the cluster's joint Tr(ρ²)). The round-trip law holds to float precision:
+    given {theta, phi, r_bloch, r_xy}, (x,y,z) reconstructs as
+        x = r_xy·cos(phi),  y = r_xy·sin(phi),  z = r_bloch·cos(theta)
+    (pinned in tests/test_cognifold_trace.py)."""
+    x, y, z = float(x), float(y), float(z)
+    r_bloch = bloch_radius(x, y, z)          # |r| — the confidence coordinate
+    denom = r_bloch if r_bloch > _EPS else _EPS
+    theta = math.acos(max(-1.0, min(1.0, z / denom)))
+    phi = math.atan2(y, x)
+    r_xy = math.hypot(x, y)
+    p0 = (z + 1.0) / 2.0
+    purity = float(qubit_purity((x, y, z)))  # (1+|r|²)/2 — this leaf's own radius
+    return {
+        "p0": p0, "p1": 1.0 - p0,
+        "r_xy": r_xy, "r_bloch": r_bloch,
+        "phi": phi, "theta": theta, "purity": purity,
+    }
+
+
+# ── input normalization: reuse host.api.beliefs() whether host or raw engine ──
+
+def _engine_and_beliefs(host_or_engine: Any):
+    """Return (engine, beliefs_map). `beliefs_map` is `{"node.role": Belief}` from the canonical
+    `host.api.beliefs()` readout — called directly on a GameHost, or via a GameHost bound to a raw
+    engine (the worker path). Both routes share ONE gauge implementation; never raises."""
+    obj = host_or_engine
+    # A raw BeliefEngine carries `.field.clusters`; a host/worker carries `.engine`.
+    if hasattr(obj, "field") and hasattr(getattr(obj, "field", None), "clusters"):
+        eng = obj
+    elif hasattr(obj, "engine"):
+        try:
+            eng = obj.engine
+        except Exception:
+            eng = obj
+    else:
+        eng = obj
+
+    beliefs_map: dict = {}
+    try:
+        if hasattr(obj, "beliefs") and callable(obj.beliefs):
+            beliefs_map = obj.beliefs()
+        else:
+            from umwelt.host.api import GameHost
+            h = GameHost()
+            h._engine = eng
+            beliefs_map = h.beliefs()
+    except Exception:
+        beliefs_map = {}
+    return eng, beliefs_map
+
+
+def _world_name(eng: Any, world: str | None) -> str:
+    if world:
+        return str(world)
+    try:
+        root = getattr(getattr(eng, "graph", None), "root", None)
+        if root is not None and getattr(root, "name", None):
+            return str(root.name)
+    except Exception:
+        pass
+    return "umwelt"
+
+
+def _belief_clusters(eng: Any):
+    """The belief clusters, in field order — the SAME set transparency/graph_state renders as
+    `bloch_cluster` organs (skip the param fibers and the `_`-prefixed internals). Yields
+    (name, cluster, roles) with roles in `qubit_roles` order (so transparency's zz/xy `a`/`b`
+    role names index the registers built here)."""
+    field = getattr(eng, "field", None)
+    clusters = getattr(field, "clusters", None) or {}
+    for name, c in clusters.items():
+        if str(name).startswith("_"):
+            continue
+        try:
+            if is_param_fiber(c):
+                continue
+        except Exception:
+            continue
+        roles = list(getattr(c, "qubit_roles", ()) or ())
+        if roles:
+            yield name, c, roles
+
+
+def _forecasts_by_leaf(eng: Any) -> dict:
+    """`{(node, role): [{"horizon_min", "z_pred", "skill"}, ...]}` from an attached ForecastSurface.
+    Empty when no forecaster is attached, or its leaf allowlist is empty (the domain-free default)."""
+    out: dict = {}
+    fs = getattr(eng, "forecast_surface", None)
+    if fs is None:
+        return out
+    try:
+        preds = fs.predictions()  # {(node, role, horizon): {z_pred, skill, horizon_min, ...}}
+    except Exception:
+        return out
+    for (node, role, _h), d in preds.items():
+        try:
+            hm = float(d.get("horizon_min"))
+        except (TypeError, ValueError):
+            continue
+        entry = {
+            "horizon_min": int(hm) if hm.is_integer() else round(hm, 3),
+            "z_pred": d.get("z_pred"),
+            "skill": d.get("skill"),
+        }
+        out.setdefault((node, role), []).append(entry)
+    for leaf in out:
+        out[leaf].sort(key=lambda e: (e["horizon_min"] is None, e["horizon_min"]))
+    return out
+
+
+# ── edges: re-voice the couplings that already exist onto register indices ────
+
+def _bridge_edges(eng: Any, reg_id: dict) -> list[dict]:
+    """Cross-cluster bridge couplings (kind "bridge"). Same source as graph_state's `_edges`
+    (`graph.bridges`), expanded from node↔node to register↔register per shared role (or, for a
+    directed tendril, per `role_map` pair). weight = the bridge's coupling_weight."""
+    out: list[dict] = []
+    graph = _resolve_graph(eng)
+    for b in (getattr(graph, "bridges", None) or []):
+        try:
+            weight = round(float(getattr(b, "coupling_weight", 0.0)), 6)
+            role_map = dict(getattr(b, "role_map", {}) or {})
+            if role_map:
+                pairs = list(role_map.items())          # directed tendril: src_role → tgt_role
+            else:
+                pairs = [(r, r) for r in (getattr(b, "shared_roles", None) or [])]
+            for src_role, tgt_role in pairs:
+                i = reg_id.get((b.source, src_role))
+                j = reg_id.get((b.target, tgt_role))
+                if i is None or j is None or i == j:
+                    continue
+                out.append({"i": i, "j": j, "weight": weight, "kind": "bridge"})
+        except Exception:
+            continue
+    return out
+
+
+def _intra_edges(eng: Any, reg_id: dict) -> list[dict]:
+    """Intra-cluster learned couplings from transparency.model_snapshot: `zz` Ising (kind "zz",
+    weight = |J|) and `xy` exchange (kind "xy", weight = |k| = √(kxx²+kyy²))."""
+    out: list[dict] = []
+    try:
+        snap = _transparency.model_snapshot(eng)
+    except Exception:
+        return out
+    for cl in snap.get("clusters", []) or []:
+        name = cl.get("name")
+        for e in cl.get("zz", []) or []:
+            i = reg_id.get((name, e.get("a")))
+            j = reg_id.get((name, e.get("b")))
+            if i is None or j is None or i == j:
+                continue
+            out.append({"i": i, "j": j,
+                        "weight": round(abs(float(e.get("j", 0.0))), 6), "kind": "zz"})
+        for e in cl.get("xy", []) or []:
+            i = reg_id.get((name, e.get("a")))
+            j = reg_id.get((name, e.get("b")))
+            if i is None or j is None or i == j:
+                continue
+            mag = math.hypot(float(e.get("kxx", 0.0)), float(e.get("kyy", 0.0)))
+            out.append({"i": i, "j": j, "weight": round(mag, 6), "kind": "xy"})
+    return out
+
+
+# ── the export ────────────────────────────────────────────────────────────────
+
+def cognifold_trace(host_or_engine: Any, *, world: str | None = None) -> dict:
+    """The belief-field as a `cognifold_trace_v1` document: a flat register list (Bloch spherical
+    geometry + unified gauge + per-leaf forecast) plus the coupling edges, indexed so `edges[k].i/.j`
+    address `registers`. Reuses `host.api.beliefs()` (gauge) and `transparency`/`graph.bridges`
+    (topology). Cheap, additive, guarded — degrades to a valid empty envelope, never raises."""
+    eng, beliefs_map = _engine_and_beliefs(host_or_engine)
+    forecasts = _forecasts_by_leaf(eng)
+
+    registers: list[dict] = []
+    reg_id: dict[tuple, int] = {}
+    for name, c, roles in _belief_clusters(eng):
+        for role in roles:
+            try:
+                bloch = c.role_bloch(role)
+                x, y, z = float(bloch[0]), float(bloch[1]), float(bloch[2])
+            except Exception:
+                continue
+            geom = register_geometry(x, y, z)
+            rid = len(registers)
+            reg_id[(name, role)] = rid
+            belief = beliefs_map.get(f"{name}.{role}")
+            registers.append({
+                "id": rid, "node": name, "role": role,
+                **geom,
+                "value": geom["p0"], "confidence": geom["r_bloch"],
+                "reliability": getattr(belief, "reliability", None),
+                "forecast_skill": getattr(belief, "forecast_skill", None),
+                "forecast": forecasts.get((name, role), []),
+            })
+
+    edges = _bridge_edges(eng, reg_id) + _intra_edges(eng, reg_id)
+
+    return {
+        "world": _world_name(eng, world),
+        "format": FORMAT,
+        "n_registers": len(registers),
+        "registers": registers,
+        "edges": edges,
+    }

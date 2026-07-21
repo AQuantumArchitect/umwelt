@@ -70,6 +70,9 @@ class UmweltClient:
     def state(self) -> dict:
         return self._call("GET", "state")
 
+    def cognifold(self) -> dict:
+        return self._call("GET", "cognifold")
+
     def belief(self, node: str, role: str) -> dict:
         return self._call("GET", f"beliefs?node={node}&role={role}")
 
