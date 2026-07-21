@@ -211,6 +211,32 @@ def test_forecast_ladder_populates_when_surface_attached_and_stepped():
     assert reg["forecast_skill"] is not None            # shortest-horizon skill flows to the gauge
 
 
+def test_actions_section_wires_decisions_to_driving_registers():
+    """The decision layer ("why did it act"): each output tendril surfaces in `actions`, wired by
+    `driving_register` to the belief register (node,role) that drives it, with the honest
+    shadow/gated fields. It must be a PURE read — building the trace must not step/mutate the
+    tendrils. This is the producer half of SpaceWheat's belief→action overlay."""
+    h = GameHost()
+    h.register_world(_gauge_spec(), population=False)   # _gauge_spec declares OutputSpec("a_out", a, level)
+    t = datetime(2026, 7, 20, 9, 0)
+    for i in range(6):
+        h.engine.ingest(sensor_readings={"a_in": 1.0}, now=t + timedelta(minutes=5 * i))
+
+    tr = C.cognifold_trace(h)
+    assert isinstance(tr.get("actions"), list)
+    act = next((a for a in tr["actions"] if a["id"] == "a_out"), None)
+    assert act is not None, "the a_out output tendril should surface as an action"
+    assert act["node"] == "a" and act["role"] == "level"
+    dr = act["driving_register"]
+    assert dr is not None and tr["registers"][dr]["node"] == "a" and tr["registers"][dr]["role"] == "level"
+    # gauge/gridworld outputs are shadow by default → honest "decided, but dispatched nothing"
+    assert act["shadow"] is True and "shadow" in act["gates_held"] and act["gated"] is True
+    for k in ("value", "committed_level", "confidence", "decode", "kind"):
+        assert k in act
+    # pure read: a second trace is identical (no tendril mutation between calls)
+    assert C.cognifold_trace(h)["actions"] == tr["actions"]
+
+
 def test_never_observed_leaf_has_null_reliability():
     """A leaf that was never observed carries null reliability — the gauge is honest about
     'I have no trust estimate here' rather than fabricating one."""

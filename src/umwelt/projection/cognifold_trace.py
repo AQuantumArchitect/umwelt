@@ -209,6 +209,62 @@ def _intra_edges(eng: Any, reg_id: dict) -> list[dict]:
     return out
 
 
+def _actions_section(eng: Any, reg_id: dict) -> list:
+    """The decision layer: each output tendril's current committed recommendation, wired to the
+    belief register that DRIVES it (OutputSpec names a node+role → a register). The `shadow` /
+    `gated` fields are the "why did it act — or NOT" honesty: a shadow output decides visibly but
+    dispatches nothing (earned-autonomy un-flipped), so every decision is a ghost first. PURE
+    reads only — never steps a tendril (that mutates the commit pump); guarded per-tendril,
+    degrades to []."""
+    out: list = []
+    tendrils = getattr(eng, "tendrils", None) or []
+    for t in tendrils:
+        try:
+            node = getattr(t, "node", None)
+            role = getattr(t, "role", None)
+            commit = getattr(t, "commit", None)
+            level = float(getattr(commit, "level", 0.0)) if commit is not None else 0.0
+            conf = float(getattr(commit, "confidence", 0.0)) if commit is not None else 0.0
+            dec = getattr(getattr(t, "_decoder", None), "__name__", "") or ""
+            kind = str(getattr(getattr(t, "spec", None), "kind", "") or "")
+            if "linear" in dec:
+                lo, hi = getattr(t, "codomain", (0.0, 1.0))
+                value = float(lo) + level * (float(hi) - float(lo))
+            else:  # sticky / binary
+                value = 1.0 if level >= 0.5 else 0.0
+            shadow = bool(getattr(t, "shadow", True))
+            try:
+                enabled = bool(t.enabled()) if hasattr(t, "enabled") else True
+            except Exception:
+                enabled = True
+            held = []
+            if shadow:
+                held.append("shadow")
+            if not enabled:
+                held.append("disabled")
+            sp = getattr(t, "spec", None)
+            actuator = ""
+            if sp is not None:
+                actuator = (getattr(sp, "dispatch", {}) or {}).get("actuator_id", getattr(t, "name", ""))
+            out.append({
+                "id": getattr(t, "name", ""),
+                "node": node, "role": role,
+                "value": round(value, 4),
+                "committed_level": round(level, 4),
+                "confidence": round(conf, 4),
+                "decode": dec.strip("_").replace("_decoder", ""),
+                "kind": kind,
+                "shadow": shadow,
+                "gated": bool(held),
+                "gates_held": held,
+                "actuator_id": actuator,
+                "driving_register": reg_id.get((node, role)),
+            })
+        except Exception:
+            continue
+    return out
+
+
 # ── the export ────────────────────────────────────────────────────────────────
 
 def cognifold_trace(host_or_engine: Any, *, world: str | None = None) -> dict:
@@ -249,4 +305,5 @@ def cognifold_trace(host_or_engine: Any, *, world: str | None = None) -> dict:
         "n_registers": len(registers),
         "registers": registers,
         "edges": edges,
+        "actions": _actions_section(eng, reg_id),
     }
