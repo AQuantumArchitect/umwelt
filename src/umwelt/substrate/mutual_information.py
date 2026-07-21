@@ -140,15 +140,21 @@ def cluster_mi_scan(cluster, *, floor: float = DEFAULT_FLOOR,
     return out
 
 
-def field_mi_scan(field, *, floor: float = DEFAULT_FLOOR,
-                  strong: float = DEFAULT_STRONG) -> dict[str, list[dict]]:
+def field_mi_scan(field, *, floor: float = DEFAULT_FLOOR, strong: float = DEFAULT_STRONG,
+                  cumulant_only: bool = False) -> dict[str, list[dict]]:
     """Scan the whole belief-field for intra-cluster mutual information above the floor — the
     sensor. Product clusters (the common case) cost only their gates; MI surfaces where beliefs
-    genuinely correlate. Returns {cluster_name: [pair dicts]} for clusters with any live MI."""
+    genuinely correlate. Returns {cluster_name: [pair dicts]} for clusters with any live MI.
+
+    `cumulant_only` skips dense clusters, whose joint rho is a mean-field completion carrying a
+    spurious ~0.05 correlation residue — MI is only faithful where e2 is tracked (cumulant)."""
     out: dict[str, list[dict]] = {}
     for name, c in getattr(field, "clusters", {}).items():
-        if len(getattr(c, "qubit_roles", [])) >= 2:
-            pairs = cluster_mi_scan(c, floor=floor, strong=strong)
-            if pairs:
-                out[name] = pairs
+        if len(getattr(c, "qubit_roles", [])) < 2:
+            continue
+        if cumulant_only and not (hasattr(c, "e1") and hasattr(c, "e2")):
+            continue
+        pairs = cluster_mi_scan(c, floor=floor, strong=strong)
+        if pairs:
+            out[name] = pairs
     return out

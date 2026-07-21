@@ -110,7 +110,7 @@ def test_edges_index_valid_registers():
     n = tr["n_registers"]
     assert tr["edges"], "the gridworld's bridges should yield at least one edge"
     kinds = {e["kind"] for e in tr["edges"]}
-    assert kinds <= {"bridge", "zz", "xy"}
+    assert kinds <= {"bridge", "zz", "xy", "mi"}
     for e in tr["edges"]:
         assert 0 <= e["i"] < n and 0 <= e["j"] < n
         assert e["i"] != e["j"]
@@ -235,6 +235,32 @@ def test_actions_section_wires_decisions_to_driving_registers():
         assert k in act
     # pure read: a second trace is identical (no tendril mutation between calls)
     assert C.cognifold_trace(h)["actions"] == tr["actions"]
+
+
+def test_mi_edges_surface_real_correlation():
+    """The MI-sensor edges: a cumulant cluster carrying real connected correlation yields a
+    kind='mi' edge wired to the right registers; a product cluster yields none (gated, ~free)."""
+    import numpy as np
+
+    class _FakeCumulant:
+        qubit_roles = ["a", "b"]
+
+        def __init__(self, correlate):
+            self.e1 = np.zeros((2, 3))
+            self.e2 = np.zeros((2, 2, 3, 3))
+            if correlate:
+                self.e2[0, 1, 2, 2] = 0.6      # connected <zz> between a and b
+                self.e2[1, 0, 2, 2] = 0.6
+
+    class _FakeEng:
+        def __init__(self, correlate):
+            self.field = type("F", (), {"clusters": {"n": _FakeCumulant(correlate)}})()
+
+    reg_id = {("n", "a"): 0, ("n", "b"): 1}
+    edges = C._mi_edges(_FakeEng(correlate=True), reg_id)
+    assert len(edges) == 1 and edges[0]["kind"] == "mi"
+    assert {edges[0]["i"], edges[0]["j"]} == {0, 1} and edges[0]["weight"] > 0.0
+    assert C._mi_edges(_FakeEng(correlate=False), reg_id) == []   # product → gated, no edge
 
 
 def test_never_observed_leaf_has_null_reliability():

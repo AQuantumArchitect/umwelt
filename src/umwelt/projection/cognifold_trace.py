@@ -209,6 +209,31 @@ def _intra_edges(eng: Any, reg_id: dict) -> list[dict]:
     return out
 
 
+def _mi_edges(eng: Any, reg_id: dict, *, floor: float = 1e-4) -> list:
+    """Real quantum mutual-information edges: I(A:B) in bits between co-located beliefs, via the
+    fast connected-correlation sensor (substrate.mutual_information — product pairs cost only the
+    gate, so this is ~free). DISTINCT from the zz/xy Hamiltonian-COUPLING edges: those are learned
+    potential; this is the beliefs' ACTUAL shared information right now. Empty when the field sits
+    at product (the common resting state, since observations decorrelate) and lights up where
+    correlation genuinely lives. Cumulant clusters only (dense joint rho carries a spurious residue)."""
+    out: list = []
+    field = getattr(eng, "field", None)
+    if field is None:
+        return out
+    try:
+        from umwelt.substrate.mutual_information import field_mi_scan
+        for node, pairs in field_mi_scan(field, floor=floor, cumulant_only=True).items():
+            for p in pairs:
+                i = reg_id.get((node, p["role_i"]))
+                j = reg_id.get((node, p["role_j"]))
+                if i is None or j is None or i == j:
+                    continue
+                out.append({"i": i, "j": j, "weight": round(float(p["mi_bits"]), 6), "kind": "mi"})
+    except Exception:
+        pass
+    return out
+
+
 def _actions_section(eng: Any, reg_id: dict) -> list:
     """The decision layer: each output tendril's current committed recommendation, wired to the
     belief register that DRIVES it (OutputSpec names a node+role → a register). The `shadow` /
@@ -297,7 +322,7 @@ def cognifold_trace(host_or_engine: Any, *, world: str | None = None) -> dict:
                 "forecast": forecasts.get((name, role), []),
             })
 
-    edges = _bridge_edges(eng, reg_id) + _intra_edges(eng, reg_id)
+    edges = _bridge_edges(eng, reg_id) + _intra_edges(eng, reg_id) + _mi_edges(eng, reg_id)
 
     return {
         "world": _world_name(eng, world),
