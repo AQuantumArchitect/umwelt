@@ -182,6 +182,35 @@ def test_reliability_passes_through_and_forecast_skill_null_without_surface():
     assert reg["forecast"] == []
 
 
+def test_forecast_ladder_populates_when_surface_attached_and_stepped():
+    """The positive counterpart to the null case: attach a ForecastSurface over the leaf and
+    step it each ingest with the sim clock, and the trace's per-register `forecast` ladder
+    populates with {horizon_min, z_pred, skill} rungs plus a non-null forecast_skill. Pins the
+    otherwise-DORMANT forecast path (nothing in build_engine/ingest attaches or steps a surface;
+    DEFAULT_FORECAST_LEAVES is empty) so it can't silently rot — this is the exact wiring
+    proofs/forecast_walk.py drives to make SpaceWheat's cognifold self-forecast overlay real."""
+    from umwelt.foresight.forecast_surface import ForecastSurface
+
+    h = GameHost()
+    h.register_world(_gauge_spec(), population=False)
+    # shortest single horizon so the delayed label matures quickly within the test's sim span
+    h.engine.forecast_surface = ForecastSurface(leaves=(("a", "level"),), horizons_min=(13.0,))
+    t = datetime(2026, 7, 20, 9, 0)
+    for i in range(14):                                  # 14 * 5min = 70min > 13min horizon
+        now = t + timedelta(minutes=5 * i)
+        h.engine.ingest(sensor_readings={"a_in": 1.0}, now=now)
+        h.engine.forecast_surface.step(now, h.engine.field)
+
+    tr = C.cognifold_trace(h)
+    reg = next(r for r in tr["registers"] if r["node"] == "a" and r["role"] == "level")
+    assert reg["forecast"], "the shortest horizon should have matured into a prediction"
+    for e in reg["forecast"]:
+        assert set(("horizon_min", "z_pred", "skill")).issubset(e)
+        assert isinstance(e["z_pred"], (int, float))
+        assert 0.0 <= float(e["skill"]) <= 1.0
+    assert reg["forecast_skill"] is not None            # shortest-horizon skill flows to the gauge
+
+
 def test_never_observed_leaf_has_null_reliability():
     """A leaf that was never observed carries null reliability — the gauge is honest about
     'I have no trust estimate here' rather than fabricating one."""
