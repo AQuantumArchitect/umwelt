@@ -18,11 +18,17 @@ It COMPOSES the existing cheap reads — it invents no new physics:
   • forecast — per leaf, the fractal horizon ladder from an attached `ForecastSurface.predictions()`,
     else empty (the default: `DEFAULT_FORECAST_LEAVES` is empty, so a domain-free world has no leaves).
   • edges    — the couplings that already exist, re-voiced onto register indices: cross-cluster
-    `graph.bridges` (kind "bridge"), and intra-cluster `zz`/`xy` from `transparency.model_snapshot`
-    (kinds "zz"/"xy"). There is NO quantum mutual information today, so none is invented.
+    `graph.bridges` (kind "bridge"), intra-cluster learned `zz`/`xy` from `transparency.model_snapshot`
+    (kinds "zz"/"xy" — the persistent Hamiltonian SKELETON), and the beliefs' actual shared
+    information `mi` (kind "mi", bits) from the fast connected-correlation sensor (the PULSE — empty at
+    the product resting state, alight where correlation genuinely lives).
+  • manifold — the per-cluster higher-order structure of the comprehension manifold: how BOUND each
+    cluster's beliefs are (`total_correlation`), the binding's CHARACTER (`o_information` → `grain`:
+    chorus=redundancy / conspiracy=synergy, dense-exact-only), the VI `metric` between beliefs, and the
+    MI-graph `constellations`. See substrate/higher_order.py, substrate/information_geometry.py.
 
-Additive + cheap: O(1) reads only, never `engine.context()`. Degrades to an empty-but-valid envelope
-on a broken/foreign engine rather than raising. See projection/graph_state.py, host/api.py, bloch.py.
+Additive + cheap: per-cluster reads on small clusters, never `engine.context()`. Degrades to an
+empty-but-valid envelope on a broken/foreign engine rather than raising. See graph_state.py, host/api.py.
 """
 from __future__ import annotations
 
@@ -290,6 +296,46 @@ def _actions_section(eng: Any, reg_id: dict) -> list:
     return out
 
 
+# ── the manifold section: the field's higher-order shape and grain ────────────
+
+def _manifold_clusters(eng: Any) -> list[dict]:
+    """Per-cluster higher-order structure of the comprehension manifold, over the SAME belief
+    clusters the registers/edges are built from: `total_correlation` (how bound), `o_information` →
+    `grain` (the binding's character — chorus/conspiracy, dense-exact-only, else 'flat'), the VI
+    `metric` distance matrix between beliefs, and the MI-graph `constellations`. Only clusters with
+    ≥2 beliefs appear (a lone belief has nothing to bind). Guarded per-cluster, degrades to [] —
+    never raises. Reuses substrate.higher_order + substrate.information_geometry (which ride the same
+    cumulants the MI sensor already touches)."""
+    from umwelt.substrate.higher_order import cluster_higher_order
+    from umwelt.substrate.information_geometry import constellations, vi_distance_matrix
+
+    out: list[dict] = []
+    for name, c, roles in _belief_clusters(eng):
+        try:
+            ho = cluster_higher_order(c)
+            if ho is None:                       # <2 roles → no higher-order structure
+                continue
+            cons = constellations(c)
+            m_roles, D = vi_distance_matrix(c)
+            oi = ho["o_information"]
+            out.append({
+                "name": name,
+                "roles": list(roles),
+                "n": ho["n"],
+                "total_correlation": round(float(ho["total_correlation"]), 6),
+                "o_information": None if oi is None else round(float(oi), 6),
+                "grain": ho["grain"],
+                "tier": ho["tier"],
+                "max_corr_norm": round(float(ho["max_corr_norm"]), 6),
+                "constellations": cons,
+                "metric": {"roles": list(m_roles),
+                           "distance": [[round(float(v), 6) for v in row] for row in D]},
+            })
+        except Exception:
+            continue
+    return out
+
+
 # ── the export ────────────────────────────────────────────────────────────────
 
 def cognifold_trace(host_or_engine: Any, *, world: str | None = None) -> dict:
@@ -299,6 +345,15 @@ def cognifold_trace(host_or_engine: Any, *, world: str | None = None) -> dict:
     (topology). Cheap, additive, guarded — degrades to a valid empty envelope, never raises."""
     eng, beliefs_map = _engine_and_beliefs(host_or_engine)
     forecasts = _forecasts_by_leaf(eng)
+
+    manifold_clusters = _manifold_clusters(eng)
+    # (node, role) → its cluster-local constellation id, so each register can name the community it
+    # belongs to (None where the cluster has no higher-order structure — a lone belief).
+    constellation_of: dict[tuple, int] = {}
+    for cl in manifold_clusters:
+        for comp_id, comp in enumerate(cl["constellations"]):
+            for role in comp:
+                constellation_of[(cl["name"], role)] = comp_id
 
     registers: list[dict] = []
     reg_id: dict[tuple, int] = {}
@@ -320,6 +375,7 @@ def cognifold_trace(host_or_engine: Any, *, world: str | None = None) -> dict:
                 "reliability": getattr(belief, "reliability", None),
                 "forecast_skill": getattr(belief, "forecast_skill", None),
                 "forecast": forecasts.get((name, role), []),
+                "constellation": constellation_of.get((name, role)),
             })
 
     edges = _bridge_edges(eng, reg_id) + _intra_edges(eng, reg_id) + _mi_edges(eng, reg_id)
@@ -331,4 +387,5 @@ def cognifold_trace(host_or_engine: Any, *, world: str | None = None) -> dict:
         "registers": registers,
         "edges": edges,
         "actions": _actions_section(eng, reg_id),
+        "manifold": {"clusters": manifold_clusters},
     }

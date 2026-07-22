@@ -287,3 +287,60 @@ def test_broken_engine_degrades_to_empty_envelope():
     tr = C.cognifold_trace(object())      # not an engine, not a host
     assert tr["format"] == "cognifold_trace_v1"
     assert tr["n_registers"] == 0 and tr["registers"] == [] and tr["edges"] == []
+    assert tr["manifold"] == {"clusters": []}
+
+
+# ── (f) the manifold section: higher-order shape + grain + constellations ─────
+
+def test_manifold_section_present_and_additive():
+    """The manifold section rides on a real trace WITHOUT disturbing the existing contract: the edge
+    allowlist is intact (it's a section, not a new edge kind), every register gains a `constellation`
+    field (safe under the .issubset register-shape test), and any manifold cluster is well-formed."""
+    tr = _trace()
+    assert isinstance(tr["manifold"], dict) and isinstance(tr["manifold"]["clusters"], list)
+    assert {e["kind"] for e in tr["edges"]} <= {"bridge", "zz", "xy", "mi"}   # no new edge kind
+    for r in tr["registers"]:
+        assert "constellation" in r                                          # additive register field
+        assert r["constellation"] is None or isinstance(r["constellation"], int)
+    for m in tr["manifold"]["clusters"]:
+        assert set(m) >= {"name", "roles", "n", "total_correlation", "o_information",
+                          "grain", "tier", "max_corr_norm", "constellations", "metric"}
+        assert m["grain"] in {"chorus", "conspiracy", "flat"}
+        assert m["tier"] in {"gated", "proxy", "exact"}
+        dist, roles = m["metric"]["distance"], m["metric"]["roles"]
+        assert len(dist) == len(roles) and all(len(row) == len(roles) for row in dist)
+
+
+def test_manifold_section_binds_correlated_cumulant():
+    """The section surfaces a cluster's higher-order structure: a cumulant with a real correlated pair
+    reports total_correlation>0 at the proxy tier — o_information None (it feels the bind but cannot
+    sign the grain) — and the bound roles share a constellation; a product cluster reports zero, flat."""
+    import numpy as np
+
+    class _FakeCumulant:
+        def __init__(self, correlate):
+            self.qubit_roles = ["a", "b", "c"]
+            self.n_qubits = 3
+            self.e1 = np.zeros((3, 3))
+            self.e2 = np.zeros((3, 3, 3, 3))
+            if correlate:
+                self.e2[0, 1, 2, 2] = 0.6                # connected <zz> a~b; c stays product
+                self.e2[1, 0, 2, 2] = 0.6
+
+    class _FakeEng:
+        def __init__(self, correlate):
+            self.field = type("F", (), {"clusters": {"pantry": _FakeCumulant(correlate)}})()
+
+    (m,) = C._manifold_clusters(_FakeEng(correlate=True))
+    assert m["name"] == "pantry" and m["n"] == 3
+    assert m["total_correlation"] > 0.0 and m["tier"] == "proxy"
+    assert m["o_information"] is None and m["grain"] == "flat"
+    assert ["a", "b"] in m["constellations"] and ["c"] in m["constellations"]
+    dist, roles = m["metric"]["distance"], m["metric"]["roles"]
+    n = len(roles)
+    assert len(dist) == n and all(len(row) == n for row in dist)
+    assert all(abs(dist[i][i]) < 1e-9 for i in range(n))
+    assert all(abs(dist[i][j] - dist[j][i]) < 1e-9 for i in range(n) for j in range(n))
+
+    (prod,) = C._manifold_clusters(_FakeEng(correlate=False))
+    assert prod["total_correlation"] == 0.0 and prod["grain"] == "flat"

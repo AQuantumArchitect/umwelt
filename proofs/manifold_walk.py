@@ -10,9 +10,13 @@ Two levers matter (both set here): `UMWELT_CUMULANT=1` (the dense default never 
 and a multi-qubit node (pantry has 5 roles → one cumulant cluster with real intra-cluster pairs).
 
 Exports the same `cognifold_trace_v1` document as forecast_walk (registers + edges + forecast +
-actions), so SpaceWheat's CognifoldTraceView renders it UNCHANGED — same instrument, a world
-whose beliefs genuinely correlate. Honest caveat: this recorded tape's economy "barely moved",
-so forecast skill reads persistence-easy (~0.99); here the zz correlation web is the prize.
+actions + the `manifold` section), so SpaceWheat's CognifoldTraceView renders it UNCHANGED — same
+instrument, a world whose beliefs genuinely correlate. Honest caveat: this recorded tape's economy
+"barely moved", so forecast skill reads persistence-easy (~0.99); here the zz correlation web is the
+prize. And because `pantry` is a CUMULANT cluster, the manifold section exercises the PROXY tier —
+it reports total_correlation (how bound) + the VI metric + constellations, but grain="flat": the
+cumulant feels the bind, it cannot sign it. The chorus/conspiracy grain (dense-exact O-information)
+is a dense-cluster capability the unit tests own (tests/test_higher_order.py).
 
 Run:
     cd /home/primearchitect/ws/umwelt
@@ -85,12 +89,19 @@ def summarize(trace: dict) -> dict:
         kinds[e.get("kind", "?")] = kinds.get(e.get("kind", "?"), 0) + 1
     zz = sorted((abs(float(e.get("weight", 0.0))) for e in edges if e.get("kind") == "zz"),
                 reverse=True)
+    manifold = [
+        {"cluster": m.get("name"), "tier": m.get("tier"), "grain": m.get("grain"),
+         "total_correlation": m.get("total_correlation"),
+         "constellations": len(m.get("constellations", []))}
+        for m in trace.get("manifold", {}).get("clusters", [])
+    ]
     return {
         "registers": trace.get("n_registers", 0),
         "edges": len(edges), "edge_kinds": kinds,
         "zz_max": round(zz[0], 4) if zz else 0.0,
         "with_forecast": sum(1 for r in trace.get("registers", []) if r.get("forecast")),
         "actions": len(trace.get("actions", [])),
+        "manifold": manifold,
     }
 
 
