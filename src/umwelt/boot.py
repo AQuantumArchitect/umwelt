@@ -190,9 +190,14 @@ def build_engine(
         from umwelt.foresight.forecast_rollout import make_forecast_surface
         from umwelt.foresight.forecast_surface import DEFAULT_HORIZONS_MIN
         _fc_hz = tuple(getattr(spec, "forecast_horizons_min", ()) or ()) or DEFAULT_HORIZONS_MIN
-        engine.forecast_surface = make_forecast_surface(leaves=_fc_leaves, horizons_min=_fc_hz)
-        logger.info("self-forecast organ attached: %d leaves × %d horizons",
-                    len(_fc_leaves), len(_fc_hz))
+        # When the spec asks for it, each leaf also sees the cross-leaf displacement
+        # (collapse-surprise) vector — width = one slot per leaf. Off → n_context=0 → the
+        # channel is empty and the surface is byte-identical to a self-only forecast.
+        _fc_ctx = len(_fc_leaves) if getattr(spec, "forecast_context_surprise", False) else 0
+        engine.forecast_surface = make_forecast_surface(
+            leaves=_fc_leaves, horizons_min=_fc_hz, n_context=_fc_ctx)
+        logger.info("self-forecast organ attached: %d leaves × %d horizons (context=%d)",
+                    len(_fc_leaves), len(_fc_hz), _fc_ctx)
     return engine
 
 

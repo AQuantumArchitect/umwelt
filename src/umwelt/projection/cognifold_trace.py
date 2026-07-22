@@ -154,6 +154,7 @@ def _forecasts_by_leaf(eng: Any) -> dict:
             "horizon_min": int(hm) if hm.is_integer() else round(hm, 3),
             "z_pred": d.get("z_pred"),
             "skill": d.get("skill"),
+            "skill_vs_persistence": d.get("skill_vs_persistence"),
         }
         out.setdefault((node, role), []).append(entry)
     for leaf in out:

@@ -63,9 +63,19 @@ class ForecastSurface:
         horizons_min: tuple[float, ...] = DEFAULT_HORIZONS_MIN,
         lr: float = 0.03,
         l2: float = 0.005,
+        n_context: int = 0,
+        surprise_decay: float = 0.85,
     ):
         self.leaves = tuple(leaves) if leaves is not None else DEFAULT_FORECAST_LEAVES
         self.horizons = tuple(float(h) for h in horizons_min)
+        # n_context > 0 turns on the CROSS-LEAF surprise channel. Each leaf sees, per leaf, a
+        # DECAYING collapse-surprise trace (leaky integral of |Δz| — "how recently did this belief
+        # collapse", so a collapse a few ticks ago is still visible) MULTIPLIED by the reading
+        # leaf's own current z. The product matters: a collapse-driven toggle is z(t+H)=−z(t), a
+        # STATE×SURPRISE interaction a linear model can only represent if the product is supplied.
+        # Default n_context=0 → channel empty, construction/stepping byte-identical to before.
+        self.n_context = int(n_context)
+        self.surprise_decay = float(surprise_decay)
         self.bank: dict[tuple[str, str, float], LeafForecaster] = {}
         for node, role in self.leaves:
             for h in self.horizons:
@@ -77,15 +87,31 @@ class ForecastSurface:
                     sensor_id=f"forecast_{node}_{role}",
                     node=node, role=role, binary=False,
                     center=0.0, scale=1.0, horizon_minutes=h, lr=lr, l2=l2,
+                    n_context=self.n_context,
                 )
         # Last belief purity read per (node, role) — the OUTPUT-side confidence,
         # multiplied with each leaf's forecast skill (INPUT-side confidence).
         self._purity: dict[tuple[str, str], float] = {}
+        # Last Bloch-z per leaf → the realized displacement that feeds the context channel.
+        self._last_z: dict[tuple[str, str], float] = {}
+        # Decaying collapse-surprise trace per leaf (leaky integral of |Δz|).
+        self._trace: dict[tuple[str, str], float] = {}
 
     # -- live step: read each leaf's Bloch-z, predict it forward ----------------
-    def step(self, now: datetime, field) -> None:
-        """Read each comprehension leaf's current Bloch-z from the field and feed
-        it to every horizon's forecaster (online delayed-label learning)."""
+    def step(self, now: datetime, field,
+             surprise: dict[tuple[str, str], float] | None = None,
+             train: bool = True) -> None:
+        """Read each comprehension leaf's current Bloch-z from the field and feed it to
+        every horizon's forecaster (online delayed-label learning).
+
+        When n_context>0, build ONE stable-order cross-leaf context vector — the per-leaf
+        realized displacement |Δz| this tick ("which beliefs just moved / collapsed"), or an
+        external `surprise` override if supplied — and hand it to every leaf, so a leaf whose
+        future depends on another belief's collapse can learn to anticipate it. n_context==0
+        (the default) → context stays None → byte-identical to the context-free surface."""
+        # Pass 1: read z + purity, and the realized displacement since last tick.
+        cur: dict[tuple[str, str], float] = {}
+        disp: dict[tuple[str, str], float] = {}
         for node, role in self.leaves:
             cluster = field.clusters.get(node)
             if cluster is None:
@@ -98,8 +124,25 @@ class ForecastSurface:
                 self._purity[(node, role)] = float(cluster.purity)
             except Exception:
                 continue
+            cur[(node, role)] = z
+            disp[(node, role)] = abs(z - self._last_z.get((node, role), z))
+            self._last_z[(node, role)] = z
+        # Advance the decaying collapse-surprise trace (recency of |Δz|), so a collapse a few
+        # ticks ago is still visible when a dependent leaf needs it (an impulse would already be 0).
+        if self.n_context:
+            for key in self.leaves:
+                d = float(surprise.get(key, 0.0)) if surprise is not None else disp.get(key, 0.0)
+                self._trace[key] = self.surprise_decay * self._trace.get(key, 0.0) + d
+        # Pass 2: step every leaf forward. Its context is every leaf's recent-collapse trace times
+        # THIS leaf's own current z (the state×surprise interaction that makes a flip learnable).
+        for node, role in self.leaves:
+            if (node, role) not in cur:
+                continue
+            z = cur[(node, role)]
+            ctx = ([self._trace.get(k, 0.0) * z for k in self.leaves]
+                   if self.n_context else None)
             for h in self.horizons:
-                self.bank[(node, role, h)].step(now, z)
+                self.bank[(node, role, h)].step(now, z, context=ctx, train=train)
 
     def _confidence(self, fc: LeafForecaster) -> float:
         """confidence = forecast skill × belief purity, clamped to [0, 1]. A
@@ -120,6 +163,7 @@ class ForecastSurface:
                 "z_pred": round(float(fc.prediction), 5),
                 "confidence": round(self._confidence(fc), 5),
                 "skill": round(float(fc.fc.skill), 5),
+                "skill_vs_persistence": round(float(fc.fc.skill_vs_persistence), 5),
                 "horizon_min": fc.horizon_min,
                 "prediction_for": fc.prediction_for.isoformat() if fc.prediction_for else None,
             }

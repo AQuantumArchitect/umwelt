@@ -151,15 +151,18 @@ class LeafForecaster:
                         best = cand
             if best is not None:
                 ctx = context_at(dt) if (self.n_context and context_at) else None
-                pairs.append((self._feature(pts[best][0], v, ctx), pts[best][1]))
+                # v is the value current at prediction time → its norm is the persistence baseline.
+                pairs.append((self._feature(pts[best][0], v, ctx), pts[best][1], self._norm(v)))
         for _ in range(max(1, epochs)):
-            for f, label in pairs:
-                self.fc.update(f, np.array([self._norm(label)]))
+            for f, label, anchor_norm in pairs:
+                self.fc.update(f, np.array([self._norm(label)]),
+                               baseline_pred=np.array([anchor_norm]))
         self.pretrained_pairs = len(pairs)
         return len(pairs)
 
     # -- live online step (delayed-label) ------------------------------------
-    def step(self, now: datetime, current_value: float | None, context: list[float] | None = None) -> None:
+    def step(self, now: datetime, current_value: float | None, context: list[float] | None = None,
+             train: bool = True) -> None:
         if current_value is not None:
             self.last_value = float(current_value)
         anchor = self.last_value if self.last_value is not None else self.center
@@ -168,12 +171,16 @@ class LeafForecaster:
         if p is not None:
             self.prediction = self._denorm(float(p[0]))
             self.prediction_for = now + self.horizon
-        if current_value is not None:
-            self.buffer.append((now + self.horizon, feat))
+        # train=False → predict-only (frozen weights): held-out evaluation reads self.prediction
+        # and scores it externally, so a generalization split never trains on the test schedule.
+        if train and current_value is not None:
+            # Carry the persistence anchor (norm of the value current when the feature was
+            # built) so the delayed-label update can grade the model against predict-last-value.
+            self.buffer.append((now + self.horizon, feat, self._norm(anchor)))
             y = np.array([self._norm(current_value)])
             while self.buffer and self.buffer[0][0] <= now:
-                _, past_feat = self.buffer.popleft()
-                self.fc.update(past_feat, y)
+                _, past_feat, past_anchor = self.buffer.popleft()
+                self.fc.update(past_feat, y, baseline_pred=np.array([past_anchor]))
             stale = now - self.horizon
             while self.buffer and self.buffer[0][0] < stale:
                 self.buffer.popleft()
@@ -182,6 +189,7 @@ class LeafForecaster:
         return {
             "leaf": self.leaf_id, "node": self.node, "role": self.role,
             "binary": self.binary, "skill": round(self.fc.skill, 4),
+            "skill_vs_persistence": round(self.fc.skill_vs_persistence, 4),
             "n_updates": self.fc.n_updates, "pretrained_pairs": self.pretrained_pairs,
             "horizon_min": round(self.horizon_min),
             "prediction": round_or_none(self.prediction, 3),
