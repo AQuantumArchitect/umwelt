@@ -178,6 +178,21 @@ def build_engine(
     apply_seed_profile(engine, seed_profile or seed_profile_from_env())
     if role is not None:
         set_role(engine, role)
+
+    # ── SELF-FORECAST ORGAN (the third brain) ──
+    # If the spec declares forecast leaves, attach a ForecastSurface so the field
+    # anticipates its OWN future — each leaf predicts its Bloch-z forward on a φ-ladder,
+    # graded against what actually happens (confidence = skill × purity). `engine.ingest`
+    # steps it every full tick; `cognifold_trace` renders the ladder. Empty (the default)
+    # → forecast_surface stays None, byte-identical to a world that doesn't foresee itself.
+    _fc_leaves = tuple(getattr(spec, "forecast_leaves", ()) or ())
+    if _fc_leaves:
+        from umwelt.foresight.forecast_rollout import make_forecast_surface
+        from umwelt.foresight.forecast_surface import DEFAULT_HORIZONS_MIN
+        _fc_hz = tuple(getattr(spec, "forecast_horizons_min", ()) or ()) or DEFAULT_HORIZONS_MIN
+        engine.forecast_surface = make_forecast_surface(leaves=_fc_leaves, horizons_min=_fc_hz)
+        logger.info("self-forecast organ attached: %d leaves × %d horizons",
+                    len(_fc_leaves), len(_fc_hz))
     return engine
 
 

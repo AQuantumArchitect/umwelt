@@ -197,6 +197,13 @@ class DomainSpec:
     # with a reason. Declaring them turns the ingest gap from a scary "N unbound" into the
     # truth: "0 actionable, N explained." Pattern = exact id or `prefix_*` wildcard.
     ignored: tuple = ()                     # tuple[(pattern, reason)]
+    # SELF-FORECAST allowlist — the (node, role) leaves the forecast brain anticipates:
+    # each declared leaf learns to predict its OWN future Bloch-z on a φ-ladder of horizons
+    # (the third brain: forecast → live → hind). () (the default) → no ForecastSurface is
+    # attached (byte-identical to a world that doesn't foresee itself). A world that wants to
+    # be transparent about its own anticipation declares the leaves it watches itself along.
+    forecast_leaves: tuple = ()             # tuple[(node, role)]
+    forecast_horizons_min: tuple = ()       # optional φ-ladder override; () → DEFAULT_HORIZONS_MIN
     # declarative learning-vocabulary extensions (consumed by learning/reward registry)
     param_channels: tuple = ()              # tuple[(exact_or_prefix, channel_name)]
     param_key_normalizer: str | None = None # dotted "module:fn" hook, default identity

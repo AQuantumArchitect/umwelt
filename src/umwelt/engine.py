@@ -304,6 +304,11 @@ class BeliefEngine:
         # pressure negligible. Wire in via `attach_surprise_tape()`.
         self.surprise_tape: SurpriseTape | None = None
 
+        # Self-forecast organ (the third brain: forecast → live → hind). None unless the
+        # spec declares `forecast_leaves` (build_engine attaches it); `ingest` steps it each
+        # full tick so declared leaves anticipate their own future Bloch-z. See foresight/.
+        self.forecast_surface = None
+
         # Per-source last-emitted surprise value. Substrate learners (fractal
         # scales, training) only tick at their stride, so their EMAs stay
         # frozen between ticks. Without this gate the recorder emits the
@@ -1395,6 +1400,16 @@ class BeliefEngine:
                         "to": str(t.to_state),
                     },
                 )
+
+        # ── SELF-FORECAST: advance the third brain AFTER the field has fully evolved
+        # this tick, so each declared leaf reads its just-updated Bloch-z and predicts it
+        # forward. Only on a full tick (a coasted tick already returned above — nothing
+        # changed to foresee). Guarded: no organ (the default) or no timestamp → no-op.
+        if self.forecast_surface is not None and now is not None:
+            try:
+                self.forecast_surface.step(now, self.field)
+            except Exception as e:  # a forecast must never break the live tick
+                logger.warning("forecast_surface.step failed: %s", e)
 
         return {
             "features": features,
