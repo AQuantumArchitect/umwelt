@@ -66,29 +66,45 @@ class ForecastSurface:
         n_context: int = 0,
         surprise_decay: float = 0.85,
         interaction_order: int = 1,
+        max_context_features: int = 64,
     ):
         self.leaves = tuple(leaves) if leaves is not None else DEFAULT_FORECAST_LEAVES
         self.horizons = tuple(float(h) for h in horizons_min)
-        # n_context > 0 turns on the CROSS-LEAF surprise channel. Each leaf sees, per interaction
-        # SUBSET of leaves (up to `interaction_order`), the PRODUCT of those leaves' decaying
-        # collapse-surprise traces (leaky integrals of |Δz| — "how recently did each collapse")
-        # MULTIPLIED by the reading leaf's own current z. Order 1 = state×single-trace (a single-
-        # parent collapse dependency, e.g. thing_2←thing_1). Order 2 adds state×trace_i×trace_j (a
-        # two-parent AND, e.g. thing_3←thing_1∧thing_2) — the higher-order interaction a linear model
-        # needs to represent a conjunctive collapse trigger. Default n_context=0 → channel empty,
-        # byte-identical; order 1 → exactly the pairwise state×surprise features shipped before.
+        # n_context > 0 turns on the SELF-DISCOVERING HIGHER-ORDER CONTEXT. The atom pool is, per
+        # leaf, TWO signals: its current state z, and its decaying collapse-surprise trace (peak-hold
+        # of |Δz| — "how recently did it collapse"). The context is the set of MONOMIALS (products) of
+        # those atoms up to `interaction_order`: order 1 = the raw atoms (first-order), order 2 adds
+        # every pairwise product z_i·z_j / z_i·trace_j / trace_i·trace_j, etc. Every leaf sees the
+        # same monomial vector and its linear layer (with L2) SELECTS which monomials predict its own
+        # future — a hallucinated higher-order layer whose readout checks what holds. This is what
+        # forecasts genuine SYNERGY (an XOR/parity target where no first-order feature carries signal
+        # but a product does), which the earlier trace-only order-1 context could not. When the full
+        # monomial set exceeds max_context_features, a DETERMINISTIC random subset is kept (all
+        # first-order atoms + a hallucinated sample of the higher-order products). Default n_context=0
+        # → channel empty, construction/stepping byte-identical to a context-free surface.
         self.surprise_decay = float(surprise_decay)
         self.interaction_order = max(1, int(interaction_order))
-        self._ctx_subsets: tuple[tuple[int, ...], ...] = ()
+        self._monomials: tuple[tuple[int, ...], ...] = ()
         if int(n_context):
             import itertools
-            _L = len(self.leaves)
-            subsets: list[tuple[int, ...]] = []
-            for _k in range(1, min(self.interaction_order, _L) + 1):
-                subsets.extend(itertools.combinations(range(_L), _k))
-            self._ctx_subsets = tuple(subsets)
-        # actual context feature width = number of interaction subsets (len(leaves) at order 1)
-        self.n_context = len(self._ctx_subsets)
+            n_atoms = 2 * len(self.leaves)                 # per leaf: z (even index), trace (odd)
+            monos: list[tuple[int, ...]] = []
+            for _k in range(1, min(self.interaction_order, n_atoms) + 1):
+                monos.extend(itertools.combinations(range(n_atoms), _k))
+            cap = int(max_context_features)
+            if cap and len(monos) > cap:
+                import numpy as _np
+                singles = [m for m in monos if len(m) == 1]
+                higher = [m for m in monos if len(m) > 1]
+                rng = _np.random.default_rng(0)            # deterministic hallucinated subset
+                if cap <= len(singles):
+                    idx = sorted(rng.choice(len(monos), size=cap, replace=False))
+                    monos = [monos[i] for i in idx]
+                else:
+                    idx = sorted(rng.choice(len(higher), size=cap - len(singles), replace=False))
+                    monos = singles + [higher[i] for i in idx]
+            self._monomials = tuple(monos)
+        self.n_context = len(self._monomials)
         self.bank: dict[tuple[str, str, float], LeafForecaster] = {}
         for node, role in self.leaves:
             for h in self.horizons:
@@ -151,24 +167,26 @@ class ForecastSurface:
                 # long trace timescale (decay→1, to span temporally-separated parent collapses) is
                 # numerically safe — no unbounded leaky-sum overflow.
                 self._trace[key] = max(self.surprise_decay * self._trace.get(key, 0.0), d)
-        # Pass 2: step every leaf forward. Its context is, per interaction subset, the PRODUCT of
-        # those leaves' recent-collapse traces × THIS leaf's own current z — the state×surprise
-        # interaction (order 1) or state×surprise×surprise conjunction (order 2+) that makes a
-        # single- or multi-parent collapse-driven flip learnable by a linear model.
+        # Build the shared monomial context once: atom pool = [z, trace] per leaf, then every
+        # monomial's product. Every leaf sees the same vector; each leaf's linear layer selects the
+        # monomials that predict ITS own future (a hallucinated higher-order layer + a checking readout).
+        ctx = None
         if self.n_context:
-            trace_by_pos = [self._trace.get(k, 0.0) for k in self.leaves]
+            atoms: list[float] = []
+            for key in self.leaves:
+                atoms.append(cur.get(key, 0.0))            # z
+                atoms.append(self._trace.get(key, 0.0))    # decaying collapse trace
+            ctx = []
+            for mono in self._monomials:
+                p = 1.0
+                for j in mono:
+                    p *= atoms[j]
+                ctx.append(p)
+        # Pass 2: step every present leaf forward with the shared context.
         for node, role in self.leaves:
             if (node, role) not in cur:
                 continue
             z = cur[(node, role)]
-            ctx = None
-            if self.n_context:
-                ctx = []
-                for subset in self._ctx_subsets:
-                    p = z
-                    for j in subset:
-                        p *= trace_by_pos[j]
-                    ctx.append(p)
             for h in self.horizons:
                 self.bank[(node, role, h)].step(now, z, context=ctx, train=train)
 

@@ -205,6 +205,7 @@ class DomainSpec:
     forecast_leaves: tuple = ()             # tuple[(node, role)]
     forecast_horizons_min: tuple = ()       # optional φ-ladder override; () → DEFAULT_HORIZONS_MIN
     forecast_context_surprise: bool = False  # feed each leaf the cross-leaf displacement (collapse-surprise) vector
+    forecast_interaction_order: int = 2       # monomial order of the higher-order context (2 = pairwise products)
     # declarative learning-vocabulary extensions (consumed by learning/reward registry)
     param_channels: tuple = ()              # tuple[(exact_or_prefix, channel_name)]
     param_key_normalizer: str | None = None # dotted "module:fn" hook, default identity

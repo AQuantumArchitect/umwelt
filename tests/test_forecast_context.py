@@ -35,10 +35,12 @@ def _spec(context: bool):
 
 
 def test_spec_flag_sets_n_context():
-    """forecast_context_surprise=True → the organ carries one context slot per leaf; False → 0."""
+    """forecast_context_surprise=True → the higher-order monomial context is on; False → 0.
+    2 leaves → 4 atoms (z+trace each); order-2 monomials = C(4,1)+C(4,2) = 4+6 = 10."""
     on = build_engine(spec=_spec(True), population=False)
     off = build_engine(spec=_spec(False), population=False)
-    assert on.forecast_surface.n_context == 2
+    assert on.forecast_surface.n_context == 10
+    assert on.forecast_surface.interaction_order == 2
     assert off.forecast_surface.n_context == 0
 
 

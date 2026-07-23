@@ -194,8 +194,9 @@ def build_engine(
         # (collapse-surprise) vector — width = one slot per leaf. Off → n_context=0 → the
         # channel is empty and the surface is byte-identical to a self-only forecast.
         _fc_ctx = len(_fc_leaves) if getattr(spec, "forecast_context_surprise", False) else 0
+        _fc_order = int(getattr(spec, "forecast_interaction_order", 2) or 2)
         engine.forecast_surface = make_forecast_surface(
-            leaves=_fc_leaves, horizons_min=_fc_hz, n_context=_fc_ctx)
+            leaves=_fc_leaves, horizons_min=_fc_hz, n_context=_fc_ctx, interaction_order=_fc_order)
         logger.info("self-forecast organ attached: %d leaves × %d horizons (context=%d)",
                     len(_fc_leaves), len(_fc_hz), _fc_ctx)
     return engine

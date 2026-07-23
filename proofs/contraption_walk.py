@@ -148,7 +148,7 @@ def summarize(err: dict) -> dict:
                  ("thing_1", "thing_2", "thing_3") if t in rows]}
 
 
-def run(train_seeds=S_TRAIN, test_seeds=S_TEST, ticks=TICKS, interaction_order=1,
+def run(train_seeds=S_TRAIN, test_seeds=S_TEST, ticks=TICKS, interaction_order=2,
         surprise_decay=0.85) -> dict:
     """Warm-train on train_seeds, evaluate held-out on test_seeds, return the summary dict.
     interaction_order raises the surprise-context to higher-body products (2 = two-parent AND);

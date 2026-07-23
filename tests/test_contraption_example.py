@@ -24,7 +24,7 @@ def test_beliefs_move_no_persistence_mirage():
     and holds high purity — never the purity≈0.5 / z≈0 frozen point that inflates absolute skill."""
     eng = build_engine(spec=CONTRAPTION_SPEC, population=False, calibration=False, fractal=False)
     assert eng.forecast_surface is not None
-    assert eng.forecast_surface.n_context == len(THINGS)      # surprise-context channel is on
+    assert eng.forecast_surface.n_context > 0                 # higher-order monomial context is on
     z = {t: [] for t in THINGS}
     p = {t: [] for t in THINGS}
     for now, readings in bot_collapse_stream(seed=1, ticks=400):
@@ -55,10 +55,12 @@ def test_collapse_surprise_beats_persistence_and_clock_held_out():
     assert t1["surprise_beats_clock"], t1
     assert t1["skill_vs_persist_surprise"] > 0.10, t1          # observed ≈ +0.26
 
-    # documented higher-order limit: the conjunctive AND-chained thing_3 does NOT beat persistence
-    # (a pairwise state×surprise interaction cannot encode a two-parent AND).
+    # documented higher-order limit: the conjunctive AND-chained thing_3 is NOT a decisive win like
+    # thing_2 — it only hovers near persistence (the rich order-2 context lifts it from a clear loss
+    # to roughly a tie, but a two-parent AND is a much harder, low-base-rate trigger than a single
+    # watchable parent).
     t3 = rows["thing_3"]
-    assert t3["skill_vs_persist_surprise"] < 0.0, t3
+    assert t3["skill_vs_persist_surprise"] < 0.10, t3
 
     assert summary["decisive_win"] and summary["control_win"]
     assert summary["verdict"].startswith("WIN")
