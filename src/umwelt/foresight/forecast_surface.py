@@ -65,17 +65,30 @@ class ForecastSurface:
         l2: float = 0.005,
         n_context: int = 0,
         surprise_decay: float = 0.85,
+        interaction_order: int = 1,
     ):
         self.leaves = tuple(leaves) if leaves is not None else DEFAULT_FORECAST_LEAVES
         self.horizons = tuple(float(h) for h in horizons_min)
-        # n_context > 0 turns on the CROSS-LEAF surprise channel. Each leaf sees, per leaf, a
-        # DECAYING collapse-surprise trace (leaky integral of |Δz| — "how recently did this belief
-        # collapse", so a collapse a few ticks ago is still visible) MULTIPLIED by the reading
-        # leaf's own current z. The product matters: a collapse-driven toggle is z(t+H)=−z(t), a
-        # STATE×SURPRISE interaction a linear model can only represent if the product is supplied.
-        # Default n_context=0 → channel empty, construction/stepping byte-identical to before.
-        self.n_context = int(n_context)
+        # n_context > 0 turns on the CROSS-LEAF surprise channel. Each leaf sees, per interaction
+        # SUBSET of leaves (up to `interaction_order`), the PRODUCT of those leaves' decaying
+        # collapse-surprise traces (leaky integrals of |Δz| — "how recently did each collapse")
+        # MULTIPLIED by the reading leaf's own current z. Order 1 = state×single-trace (a single-
+        # parent collapse dependency, e.g. thing_2←thing_1). Order 2 adds state×trace_i×trace_j (a
+        # two-parent AND, e.g. thing_3←thing_1∧thing_2) — the higher-order interaction a linear model
+        # needs to represent a conjunctive collapse trigger. Default n_context=0 → channel empty,
+        # byte-identical; order 1 → exactly the pairwise state×surprise features shipped before.
         self.surprise_decay = float(surprise_decay)
+        self.interaction_order = max(1, int(interaction_order))
+        self._ctx_subsets: tuple[tuple[int, ...], ...] = ()
+        if int(n_context):
+            import itertools
+            _L = len(self.leaves)
+            subsets: list[tuple[int, ...]] = []
+            for _k in range(1, min(self.interaction_order, _L) + 1):
+                subsets.extend(itertools.combinations(range(_L), _k))
+            self._ctx_subsets = tuple(subsets)
+        # actual context feature width = number of interaction subsets (len(leaves) at order 1)
+        self.n_context = len(self._ctx_subsets)
         self.bank: dict[tuple[str, str, float], LeafForecaster] = {}
         for node, role in self.leaves:
             for h in self.horizons:
@@ -132,15 +145,30 @@ class ForecastSurface:
         if self.n_context:
             for key in self.leaves:
                 d = float(surprise.get(key, 0.0)) if surprise is not None else disp.get(key, 0.0)
-                self._trace[key] = self.surprise_decay * self._trace.get(key, 0.0) + d
-        # Pass 2: step every leaf forward. Its context is every leaf's recent-collapse trace times
-        # THIS leaf's own current z (the state×surprise interaction that makes a flip learnable).
+                # decaying PEAK-HOLD: jump to the full collapse magnitude |Δz|, then decay by
+                # `surprise_decay` each tick. Preserves the full spike (an EMA would attenuate it by
+                # (1−decay) and starve the signal) AND is bounded by max|Δz|≈2 for ANY decay, so a
+                # long trace timescale (decay→1, to span temporally-separated parent collapses) is
+                # numerically safe — no unbounded leaky-sum overflow.
+                self._trace[key] = max(self.surprise_decay * self._trace.get(key, 0.0), d)
+        # Pass 2: step every leaf forward. Its context is, per interaction subset, the PRODUCT of
+        # those leaves' recent-collapse traces × THIS leaf's own current z — the state×surprise
+        # interaction (order 1) or state×surprise×surprise conjunction (order 2+) that makes a
+        # single- or multi-parent collapse-driven flip learnable by a linear model.
+        if self.n_context:
+            trace_by_pos = [self._trace.get(k, 0.0) for k in self.leaves]
         for node, role in self.leaves:
             if (node, role) not in cur:
                 continue
             z = cur[(node, role)]
-            ctx = ([self._trace.get(k, 0.0) * z for k in self.leaves]
-                   if self.n_context else None)
+            ctx = None
+            if self.n_context:
+                ctx = []
+                for subset in self._ctx_subsets:
+                    p = z
+                    for j in subset:
+                        p *= trace_by_pos[j]
+                    ctx.append(p)
             for h in self.horizons:
                 self.bank[(node, role, h)].step(now, z, context=ctx, train=train)
 

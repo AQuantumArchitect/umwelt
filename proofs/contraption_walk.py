@@ -148,12 +148,17 @@ def summarize(err: dict) -> dict:
                  ("thing_1", "thing_2", "thing_3") if t in rows]}
 
 
-def run(train_seeds=S_TRAIN, test_seeds=S_TEST, ticks=TICKS) -> dict:
+def run(train_seeds=S_TRAIN, test_seeds=S_TEST, ticks=TICKS, interaction_order=1,
+        surprise_decay=0.85) -> dict:
     """Warm-train on train_seeds, evaluate held-out on test_seeds, return the summary dict.
+    interaction_order raises the surprise-context to higher-body products (2 = two-parent AND);
+    surprise_decay sets the trace timescale (higher → a collapse stays visible longer, so
+    temporally-separated parent collapses can co-occur in the product feature).
     Exposed so tests can pin the verdict on a lighter config."""
     surf_clock = ForecastSurface(leaves=FORECAST_LEAVES, horizons_min=HORIZONS, n_context=0)
     surf_surp = ForecastSurface(leaves=FORECAST_LEAVES, horizons_min=HORIZONS,
-                                n_context=len(FORECAST_LEAVES))
+                                n_context=len(FORECAST_LEAVES), interaction_order=interaction_order,
+                                surprise_decay=surprise_decay)
     _warm_train(surf_clock, surf_surp, seeds=train_seeds, ticks=ticks)
     return summarize(_score_test(surf_clock, surf_surp, seeds=test_seeds, ticks=ticks))
 
