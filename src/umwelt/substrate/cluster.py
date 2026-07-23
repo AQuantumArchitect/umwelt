@@ -18,6 +18,8 @@ Each qubit has an input mode determined by its role:
 """
 from __future__ import annotations
 
+import functools
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -28,6 +30,22 @@ from umwelt.substrate.density_matrix import (
     _single_qubit_op,
 )
 from umwelt.spec.roles import role_input_mode
+
+
+@functools.lru_cache(maxsize=256)
+def _nudge_index_arrays(L: int, R: int) -> tuple[NDArray, NDArray]:
+    """Cached (ai, bi) broadcast index arrays for nudge_toward_rdm's scatter-add —
+    same functools.lru_cache-per-shape pattern as batched_evolve._group_ops.
+    Profiled (2026-07-21, wargen-win): nudge_toward_rdm is the #1 self-time hot
+    spot in field.step() (44800 calls / 200 ticks on an 8x8 grid, ~28% of tick
+    time), and every call was rebuilding np.arange(L)/np.arange(R) from scratch
+    even though only (n_qubits, qubit_idx) — a small, bounded set — ever occur.
+    Read-only: callers must not mutate the returned arrays."""
+    ai = np.arange(L)[:, None]
+    bi = np.arange(R)[None, :]
+    ai.flags.writeable = False
+    bi.flags.writeable = False
+    return ai, bi
 
 
 def sparse_feature_vector(
@@ -358,6 +376,16 @@ class QubitCluster:
         """Dict of role → Bloch vector for all qubits."""
         return {role: self.qubit_bloch(i) for role, i in self.role_index.items()}
 
+    def role_gauge(self, role: str) -> tuple[float, float]:
+        """(value, confidence) for a role in ONE read — the calibrated belief and
+        how settled it is. value = (z+1)/2 ∈ [0,1]; confidence = Bloch radius |r| ∈
+        [0,1] (1=pure/certain, 0=maximally mixed/unknown). This is the one accessor
+        every readout should reach for instead of hand-rolling z; it makes belief
+        certainty a first-class, uniform coordinate wherever a cluster is read."""
+        from umwelt.substrate.bloch import bloch_radius
+        x, y, z = (float(v) for v in self.role_bloch(role))
+        return (z + 1.0) / 2.0, bloch_radius(x, y, z)
+
     # ================================================================
     # SubstrateBackend contract — the field goes through these instead of
     # reaching into the dense `.rho` directly (substrate.py).
@@ -380,8 +408,7 @@ class QubitCluster:
         R = 1 << (n - 1 - qubit_idx)       # 2^(qubits right of the target)
         rho = self.rho.copy()
         view = rho.reshape(L, 2, R, L, 2, R)
-        ai = np.arange(L)[:, None]
-        bi = np.arange(R)[None, :]
+        ai, bi = _nudge_index_arrays(L, R)
         # add alpha·δ/(L·R) at [a, :, b, a, :, b] for all a,b — the maximally-mixed identity slots
         view[ai, :, bi, ai, :, bi] += (alpha / (L * R)) * delta
         rho = 0.5 * (rho + rho.conj().T)

@@ -102,11 +102,11 @@ SPEC = DomainSpec(
 def make_world(tmp_path: Path, name: str = "mood") -> Path:
     wdir = tmp_path / "worlds" / name
     wdir.mkdir(parents=True)
-    (wdir / "world_spec_packet.py").write_text(SPEC_SHIM)
+    (wdir / "world_spec_packet.py").write_text(SPEC_SHIM, encoding="utf-8")
     (wdir / "world.json").write_text(json.dumps(
-        {"name": name, "spec": "world_spec_packet:SPEC", "flush_secs": 30.0}))
+        {"name": name, "spec": "world_spec_packet:SPEC", "flush_secs": 30.0}), encoding="utf-8")
     (wdir / "MANIFEST.toml").write_text(
-        'spec = "world_spec_packet:SPEC"\npythonpath = ["."]\n')
+        'spec = "world_spec_packet:SPEC"\npythonpath = ["."]\n', encoding="utf-8")
     return wdir
 
 
