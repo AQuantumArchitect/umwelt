@@ -8,12 +8,13 @@ game into one library.*
 
 If this page and [CLAIMS.md](../CLAIMS.md) disagree on what is proven, the ledger
 wins. Phases 1–5 below ship **in this monorepo** with public synthetic gates;
-Phase 6 (host-repo integration) does not.
+Phase 6 (host-repo integration) ships in the sibling host repos.
 
-**Status snapshot (2026-07):** Phases **1–5 implemented and CI-gated** on synthetic
-Fledgeling-shaped fixtures. Phase **0** (maintainer ADR) informal. Phase **6** not
-started. Next product work is integration into a real Fledgeling host, not more
-metaphor.
+**Status snapshot (2026-07, updated 2026-07-28):** Phases **1–5 implemented and
+CI-gated** on synthetic Fledgeling-shaped fixtures. Phase **0** (maintainer ADR)
+informal. Phase **6 shipped as the septacrypt host stack** — `septacrypt-core`
+(kernel) + `septacrypt-fledgling` (playable HTTP host, Star Pod Story Physics),
+both public, depending on umwelt as a pinned sibling; see the Phase 6 section.
 
 ---
 
@@ -156,7 +157,7 @@ Language            substrate internals optional     + Belief(value, confidence)
 | Procedural topology mutation | Medium | Still experimental / product-owned |
 | Abstraction / LOD of belief | Medium | Deferred (`scale` kit unscheduled) |
 | Retro-sim / prior synthesis | High (later) | Out of v1 |
-| Host-repo integration | High (product) | **Phase 6 — open** |
+| Host-repo integration | High (product) | **Phase 6 — shipped** (septacrypt host stack) |
 | Content / narrative | N/A | Never the engine’s job |
 
 ---
@@ -313,21 +314,33 @@ Optional modules under `src/umwelt/kits/` — specs + baselines + README honesty
 
 ---
 
-### Phase 6 — Product shape inside Fledgeling (integration) ⬚ OPEN
+### Phase 6 — Product shape inside Fledgeling (integration) ✅ SHIPPED (host repos, 2026-07)
 
 **Goal:** FL-core is a dependency of a real Fledgeling host repo, not only this monorepo.
 
+**Status:** this exists and is public — the host stack is
+[`septacrypt-core`](https://github.com/AQuantumArchitect/septacrypt-core)
+(game kernel: Knot Ledger, certified transactions, WorldSpec, Universal
+Architect) + [`septacrypt-fledgling`](https://github.com/AQuantumArchitect/septacrypt-fledgling)
+(stdlib HTTP host, frozen `fledgeling.api.v1`, the playable Star Pod
+"Story Physics" vertical), both depending on umwelt as a pinned sibling.
+The host's voice minds are a thin `UmweltMindsAdapter` over `WorldSession`
+(multi-mind, private beliefs, typed observation channels) — no belief
+reimplementation anywhere in the host tree (Protocol-conformance gated).
+
 | Work | Notes |
 |---|---|
-| Versioned package (`umwelt-engine` or split `umwelt-fledgeling`) | Semver; still 0.x |
-| Host adapter in Fledgeling tree | Game owns content; core owns belief contracts |
-| Optional umweltd for tools / editors | Not required in the player binary |
-| Shared CLAIMS or dual ledger | Keep DENIED culture across repos |
-| Keep host-boundary language plain | Host face already plain; THEORY/substrate modules may keep formal names |
+| Versioned package (`umwelt-engine` or split `umwelt-fledgeling`) | Still 0.x; hosts pin sibling checkouts (see septacrypt-fledgling `docs/PINS.md`) |
+| Host adapter in Fledgeling tree | ✅ `septacrypt_fledgling/minds/adapter.py`; game owns content; core owns belief contracts |
+| Optional umweltd for tools / editors | Not required in the player binary (unchanged) |
+| Shared CLAIMS or dual ledger | Hosts carry honest limits sections in their READMEs; DENIED culture intact |
+| Keep host-boundary language plain | Host face plain throughout the septacrypt repos |
 
 **Exit gate:**
 
-- [ ] Fledgeling build runs FL-core tests or a vendor copy of the fog proof
+- [x] Fledgeling build runs deterministic end-to-end gates over the stack
+      (`proofs/prove_http_loop.py`, `proofs/prove_story_loop.py` — seed-pinned,
+      bit-stable, exercising `WorldSession` minds through the host adapter)
 - [ ] Designers can author a small place-graph without reading THEORY.md
 - [ ] One playable loop (even tiny) where turning FL-core off makes the SI dumber in a measured way
 
@@ -433,8 +446,11 @@ NOW     Belief engine + gridworld/house evidence + FL-core Phases 1–5 in-repo:
         fog corridor, GameHost, WorldSession multi-mind, agency loop, four facet kits.
         All FL gates are public synthetic CI — not origin/HA effect sizes.
 
-NEXT    Phase 6: real Fledgeling host dependency; playable loop where FL-core off
-        makes the SI measurably dumber; optional package split / semver 0.x polish.
+NEXT    Phase 6 landed as the septacrypt host stack (septacrypt-core +
+        septacrypt-fledgling: certified Knot Ledger over CumulantCluster,
+        WorldSession voice minds, playable Star Pod vertical over HTTP).
+        Remaining: the FL-core-off ablation measurement; optional package
+        split / semver 0.x polish.
 
 LATER   scale / LOD research (only if Uplift asks); richer facet content in game tree.
 
