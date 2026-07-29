@@ -1,7 +1,15 @@
 # Butler — email + reminders + coordination for busy people
 
-**Status: sketch + spec stub.** The domain adapter is designed; the synthetic demo is owed
-(see CLAIMS.md — nothing here claims a measured result).
+**Status: IMPLEMENTED + measured (2026-07-28).** The world lives in the yurt repo at
+`worlds/butler_life/` (spec factory, η tiers as per-binding `collapse_alpha`
+explicit 0.98 / lived 0.90 / shield 0.25 / garbage 0.0, the gamma_diss cadence
+lesson) with the owed synthetic family week in `fixtures/synthetic_week.jsonl`
+and 5 green proofs in `test_butler_life.py`: ease-with-evidence + decay-in-
+silence, η=0 bit-identical no-op, nudge→effect causal self-tag, tier
+monotonicity, live-spec build. It is registered on the yurt hearth and fed by
+Butler (`~/ws/butler`, the front-desk kernel) whose march marks post
+explicit-tier observations. Still owed: the Watch⇄Run dial EARNING autonomy on
+live data (see CLAIMS.md, "PARTIALLY PAID").
 
 ## The umwelt
 
