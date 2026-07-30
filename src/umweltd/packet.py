@@ -246,8 +246,17 @@ def read_manifest_toml(world: Path) -> dict:
     p = Path(world) / "MANIFEST.toml"
     if not p.exists():
         return {}
-    import tomllib
-    return tomllib.loads(p.read_text())
+    # tomllib is stdlib 3.11+; pyproject claims >=3.10 so fall back to tomli.
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # pragma: no cover — exercised on 3.10 CI
+        try:
+            import tomli as tomllib  # type: ignore[no-redef]
+        except ModuleNotFoundError as exc:
+            raise ModuleNotFoundError(
+                "MANIFEST.toml requires tomllib (3.11+) or the tomli package on 3.10"
+            ) from exc
+    return tomllib.loads(p.read_text(encoding="utf-8"))
 
 
 def resolve_pythonpath(world: Path) -> list[str]:
