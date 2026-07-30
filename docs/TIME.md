@@ -54,3 +54,10 @@ plane, not a second universe clock. Roadmap: [FLEDGELING_CORE.md](FLEDGELING_COR
   it can never mint a belief, a node, or a phase.
 - Anything a domain wants to *know* about time must enter as declared data
   (drivers/bindings) and earn comprehension like any other signal.
+
+The rule governs **specs** — a domain's declared world model. Projections are
+readout surfaces of the instrument, not world models: `cognifold_trace` already
+publishes non-gauge internals (the MI sensor, the model snapshot), and such
+surfaces MAY publish solver-time quantities like per-register Berry phase as
+instrument readouts a renderer or console can watch — no belief, node, or phase
+is ever minted from them.

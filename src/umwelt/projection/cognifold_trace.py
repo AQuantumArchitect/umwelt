@@ -14,7 +14,11 @@ It COMPOSES the existing cheap reads — it invents no new physics:
     with every other chart. `r_bloch` IS the confidence coordinate; `purity` is the PER-REGISTER
     single-qubit form (1+|r|²)/2 (NOT the cluster's joint Tr(ρ²)).
   • gauge    — `reliability` + `forecast_skill` ride in from `host.api.beliefs()` (the canonical unified
-    gauge); both may be `null` (a never-observed leaf / no forecaster attached).
+    gauge); both may be `null` (a never-observed leaf / no forecaster attached). Two instrument
+    readouts ride alongside: `surprise` — the leaf's learned innovation EMA from observation trust
+    (reliability's un-clipped sibling: reliability = alpha, a clipped saturating transform of this;
+    null on a never-observed leaf) — and `berry_phase` — the register qubit's accumulated geometric
+    (Berry) phase γ from `engine.bloch_berry` (null when the tape is absent or hasn't sampled it).
   • forecast — per leaf, the fractal horizon ladder from an attached `ForecastSurface.predictions()`,
     else empty (the default: `DEFAULT_FORECAST_LEAVES` is empty, so a domain-free world has no leaves).
   • edges    — the couplings that already exist, re-voiced onto register indices: cross-cluster
@@ -347,6 +351,20 @@ def cognifold_trace(host_or_engine: Any, *, world: str | None = None) -> dict:
     eng, beliefs_map = _engine_and_beliefs(host_or_engine)
     forecasts = _forecasts_by_leaf(eng)
 
+    # Berry tape: per-qubit accumulated geometric phase, keyed "cluster:qubit_index"
+    # (engine.bloch_berry — absent on a foreign engine → every berry_phase is null).
+    berry_phases = getattr(getattr(eng, "bloch_berry", None), "phases", None) or {}
+
+    # Observation trust: per-leaf innovation EMA, keyed "node.role" — read ONCE per call,
+    # same guard as host.api.beliefs() (lazy `_obs_trust` is None on a never-observed engine).
+    trust_snap: dict = {}
+    _ot = getattr(eng, "_obs_trust", None)
+    if _ot is not None:
+        try:
+            trust_snap = _ot.snapshot()  # {"node.role": {"innov_ema", "alpha"}}
+        except Exception:
+            trust_snap = {}
+
     manifold_clusters = _manifold_clusters(eng)
     # (node, role) → its cluster-local constellation id, so each register can name the community it
     # belongs to (None where the cluster has no higher-order structure — a lone belief).
@@ -369,11 +387,19 @@ def cognifold_trace(host_or_engine: Any, *, world: str | None = None) -> dict:
             rid = len(registers)
             reg_id[(name, role)] = rid
             belief = beliefs_map.get(f"{name}.{role}")
+            try:
+                qi = (getattr(c, "role_index", {}) or {}).get(role)
+                berry = berry_phases.get(f"{name}:{qi}") if qi is not None else None
+                berry = None if berry is None else float(berry)
+            except Exception:
+                berry = None
             registers.append({
                 "id": rid, "node": name, "role": role,
                 **geom,
                 "value": geom["p0"], "confidence": geom["r_bloch"],
                 "reliability": getattr(belief, "reliability", None),
+                "surprise": trust_snap.get(f"{name}.{role}", {}).get("innov_ema"),
+                "berry_phase": berry,
                 "forecast_skill": getattr(belief, "forecast_skill", None),
                 "forecast": forecasts.get((name, role), []),
                 "constellation": constellation_of.get((name, role)),

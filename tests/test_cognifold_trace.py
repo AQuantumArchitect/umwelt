@@ -88,8 +88,8 @@ def test_envelope_shape_and_format():
     assert tr["n_registers"] == len(tr["registers"]) > 0
     for r in tr["registers"]:
         assert set(("id", "node", "role", "p0", "p1", "r_xy", "r_bloch", "phi", "theta",
-                    "purity", "value", "confidence", "reliability", "forecast_skill",
-                    "forecast")).issubset(r)
+                    "purity", "value", "confidence", "reliability", "surprise", "berry_phase",
+                    "forecast_skill", "forecast")).issubset(r)
         assert r["value"] == r["p0"] and r["confidence"] == r["r_bloch"]
         # Bloch coords carry the engine's evolution FP drift; match the repo's ±1e-6 bound
         # convention (see tests/test_spec_to_field.py: `abs(v) <= 1.0 + 1e-6`). The export is a
@@ -261,6 +261,61 @@ def test_mi_edges_surface_real_correlation():
     assert len(edges) == 1 and edges[0]["kind"] == "mi"
     assert {edges[0]["i"], edges[0]["j"]} == {0, 1} and edges[0]["weight"] > 0.0
     assert C._mi_edges(_FakeEng(correlate=False), reg_id) == []   # product → gated, no edge
+
+
+def test_berry_phase_is_a_float_after_the_engine_has_ticked():
+    """Every register on a ticked engine carries a float `berry_phase`: engine.ingest advances
+    engine.bloch_berry per qubit (keyed "cluster:qubit_index"), and the trace looks each register
+    up through the cluster's role_index. γ may legitimately be 0.0 (a purely polar trajectory
+    encloses no solid angle) — the pin is presence + type, and agreement with the tape itself."""
+    h = _grid_host()
+    tr = C.cognifold_trace(h)
+    tape = h.engine.bloch_berry.phases
+    assert tape, "8 ingests should have sampled the Berry tape"
+    for r in tr["registers"]:
+        assert isinstance(r["berry_phase"], float), (r["node"], r["role"], r["berry_phase"])
+    # spot-check one register against the tape directly (role_index → "cluster:idx" key)
+    reg = tr["registers"][0]
+    cluster = h.engine.field.clusters[reg["node"]]
+    key = f"{reg['node']}:{cluster.role_index[reg['role']]}"
+    assert reg["berry_phase"] == tape[key]
+
+
+def test_berry_phase_null_when_tape_absent():
+    """A foreign/berry-less engine (bloch_berry = None) degrades to null berry_phase on every
+    register — the lookup guard, not an exception."""
+    h = _grid_host()
+    h.engine.bloch_berry = None
+    tr = C.cognifold_trace(h)
+    assert tr["n_registers"] > 0
+    assert all(r["berry_phase"] is None for r in tr["registers"])
+
+
+def test_surprise_is_innov_ema_on_observed_leaf_and_null_when_never_observed():
+    """`surprise` is the leaf's learned innovation EMA (reliability's un-clipped sibling — the
+    same observation-trust snapshot whose alpha IS reliability): a float on an observed leaf,
+    matching `_obs_trust.snapshot()` verbatim, and null everywhere on a never-observed engine
+    (lazy `_obs_trust` is None — same guard as host.api.beliefs())."""
+    h = GameHost()
+    h.register_world(_gauge_spec(), population=False)
+    t = datetime(2026, 7, 20, 9, 0)
+    for i in range(6):
+        h.engine.ingest(sensor_readings={"a_in": 1.0}, now=t + timedelta(minutes=5 * i))
+
+    tr = C.cognifold_trace(h)
+    reg = next(r for r in tr["registers"] if r["node"] == "a" and r["role"] == "level")
+    assert isinstance(reg["surprise"], float)
+    snap = h.engine._obs_trust.snapshot()
+    assert reg["surprise"] == snap["a.level"]["innov_ema"]
+    # both trust coordinates ride together: reliability (alpha) alongside surprise (innov_ema)
+    assert reg["reliability"] is not None
+
+    # never-observed engine: no trust ledger at all → surprise cleanly null on every register
+    cold = GameHost()
+    cold.register_world(_gauge_spec(), population=False)
+    tr_cold = C.cognifold_trace(cold)
+    assert tr_cold["n_registers"] > 0
+    assert all(r["surprise"] is None for r in tr_cold["registers"])
 
 
 def test_never_observed_leaf_has_null_reliability():
