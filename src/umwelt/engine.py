@@ -1108,15 +1108,22 @@ class BeliefEngine:
                 # signal's learned noise; a reliable leaf earns a high alpha (snap), a noisy one a low
                 # alpha (smooth). Confidence still rides on top via conf_brake. See observation_trust.py.
                 from umwelt.learning.observation_trust import LEARN_COLLAPSE
+                # ALWAYS track observation innovation so per-leaf RELIABILITY (the
+                # learned trust coordinate) is readable everywhere (host.api.beliefs
+                # and the hearth /beliefs endpoint). Tracking is a cheap per-leaf EMA;
+                # when LEARN_COLLAPSE is off the learned alpha is NOT used for collapse,
+                # so the dynamics stay BIT-IDENTICAL to the hand-set collapse_alpha
+                # (exact parity). It only DRIVES the collapse rate when the gate is set.
+                trust = getattr(self, "_obs_trust", None)
+                if trust is None:
+                    from umwelt.learning.observation_trust import ObservationTrust
+                    trust = self._obs_trust = ObservationTrust()
+                belief_z = float(cluster.role_bloch(role)[2])
+                learned_alpha = trust.learned_alpha(
+                    (node_name, role), float(target_bloch[2]), belief_z)
                 if LEARN_COLLAPSE:
-                    trust = getattr(self, "_obs_trust", None)
-                    if trust is None:
-                        from umwelt.learning.observation_trust import ObservationTrust
-                        trust = self._obs_trust = ObservationTrust()
                     from umwelt.membranes.ingress import conf_brake
-                    belief_z = float(cluster.role_bloch(role)[2])
-                    base = trust.learned_alpha((node_name, role), float(target_bloch[2]), belief_z)
-                    alpha = base * conf_brake(float(conf) if conf is not None else 1.0)
+                    alpha = learned_alpha * conf_brake(float(conf) if conf is not None else 1.0)
                 # alpha already folds in confidence; pass conf so it's recorded as a
                 # gauge quantity (gauge.cluster_gauge), symmetric with purity.
                 if self._belavkin:
