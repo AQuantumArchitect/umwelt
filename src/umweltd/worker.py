@@ -194,13 +194,27 @@ class WorldHost:
             return jsonable(graph_state(self.engine))
 
     def belief(self, node: str, role: str) -> dict:
+        from umwelt.host.api import _forecast_skill
         with self.lock:
             cluster = self.engine.field.clusters.get(node)
             if cluster is None:
                 raise KeyError(f"unknown node {node!r}")
             bloch = cluster.role_bloch(role)
+            value, confidence = cluster.role_gauge(role)
+            # learned reliability (observation trust) — O(1) direct read, None if unseen
+            reliability = None
+            ot = getattr(self.engine, "_obs_trust", None)
+            if ot is not None:
+                e = getattr(ot, "innov", {}).get((node, role))
+                if e is not None:
+                    reliability = round(ot._alpha_from_innov(e), 4)
+            forecast_skill = _forecast_skill(self.engine, node, role)
+        # `bloch`/`z` kept verbatim for backward-compat (foresight_boot reads ["z"]);
+        # the gauge coordinates are additive keys that flow up to every consumer.
         return {"node": node, "role": role, "bloch": jsonable(bloch),
-                "z": float(bloch[2])}
+                "z": float(bloch[2]), "value": float(value),
+                "confidence": float(confidence), "reliability": reliability,
+                "forecast_skill": forecast_skill}
 
     def recommendations(self) -> list:
         surface = getattr(self.engine, "output_surface", None)

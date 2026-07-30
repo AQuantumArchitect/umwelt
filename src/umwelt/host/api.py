@@ -53,7 +53,34 @@ class Belief:
     node: str
     role: str
     value: float  # calibrated scalar, typically [0,1] from z
-    confidence: float  # |r| ∈ [0,1]
+    confidence: float  # |r| ∈ [0,1] — Bloch radius: how settled the belief is
+    # The unified gauge, filled from latent engine machinery when available
+    # (both default None so every existing value/confidence consumer is untouched):
+    reliability: float | None = None   # learned observation trust (ObservationTrust
+    #   alpha ∈ [~0.1, ~0.97]): how consistent this leaf's readings are. None if the
+    #   leaf has never been observed.
+    forecast_skill: float | None = None  # shortest-horizon forecaster skill (1-error_ema)
+    #   from an attached forecast surface. None if no forecaster is attached.
+
+
+def _forecast_skill(eng, node: str, role: str):
+    """Shortest-horizon forecaster skill for one leaf, if a forecast surface is
+    attached to the engine (foresight/ForecastSurface). Defensive: any surface
+    without the expected shape, or none at all, yields None — so 'learn by
+    forecasting' percolates into the belief gauge when present and is simply absent
+    otherwise. No behaviour change for engines without a forecaster."""
+    fs = getattr(eng, "forecast_surface", None)
+    if fs is None:
+        return None
+    try:
+        preds = fs.predictions()  # {(node, role, horizon): {"skill", ...}}
+        cands = [(h, d.get("skill")) for (n, r, h), d in preds.items()
+                 if n == node and r == role and d.get("skill") is not None]
+        if not cands:
+            return None
+        return round(float(min(cands, key=lambda hs: hs[0])[1]), 4)
+    except Exception:
+        return None
 
 
 class GameHost:
@@ -304,6 +331,15 @@ class GameHost:
         """
         del observer_id  # single-mind host; multi-mind uses WorldSession
         eng = self.engine
+        # latent gauge coordinates, read once per call (both degrade to {} if the
+        # engine hasn't accrued them yet — additive, never raises):
+        trust_snap = {}
+        _ot = getattr(eng, "_obs_trust", None)
+        if _ot is not None:
+            try:
+                trust_snap = _ot.snapshot()  # {"node.role": {"innov_ema","alpha"}}
+            except Exception:
+                trust_snap = {}
         out: dict[str, Belief] = {}
         for cname, cluster in eng.field.clusters.items():
             roles = getattr(cluster, "role_index", {}) or {}
@@ -315,8 +351,11 @@ class GameHost:
                 x, y, z = float(bloch[0]), float(bloch[1]), float(bloch[2])
                 value = (z + 1.0) / 2.0
                 conf = bloch_radius(x, y, z)
+                rel = trust_snap.get(key, {}).get("alpha")
                 out[key] = Belief(
-                    node=cname, role=role, value=value, confidence=conf
+                    node=cname, role=role, value=value, confidence=conf,
+                    reliability=rel,
+                    forecast_skill=_forecast_skill(eng, cname, role),
                 )
         return out
 
