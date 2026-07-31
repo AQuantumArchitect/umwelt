@@ -10,6 +10,7 @@ push a batch, read a belief, snapshot) a command instead of a snippet.
     umweltctl health --world market
     umweltctl ingest --world market --file batch.json
     umweltctl belief --world market --node aapl --role drift
+    umweltctl cognifold --world market
     umweltctl snapshot --world market
     umweltctl stop --world market
     umweltctl start --world market
@@ -65,6 +66,10 @@ def cmd_state(args) -> None:
     _print(_client(args).state())
 
 
+def cmd_cognifold(args) -> None:
+    _print(_client(args).cognifold())
+
+
 def cmd_belief(args) -> None:
     _print(_client(args).belief(args.node, args.role))
 
@@ -113,6 +118,7 @@ def build_parser() -> argparse.ArgumentParser:
         ("start", cmd_start, "start (or respawn) a world"),
         ("health", cmd_health, "world health"),
         ("state", cmd_state, "the canonical graph_state projection"),
+        ("cognifold", cmd_cognifold, "the cognifold-trace export (Bloch registers + edges)"),
         ("recommendations", cmd_recommendations, "the shadow decision layer"),
         ("bindings", cmd_bindings, "the world's declared signal vocabulary"),
         ("snapshot", cmd_snapshot, "save engine + cursor"),

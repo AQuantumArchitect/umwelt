@@ -16,6 +16,7 @@ Endpoints (JSON in/out):
                             boundaries are per-request: a live pusher sends one
                             request per flush window.
     GET  /state             the canonical graph_state projection
+    GET  /cognifold         the cognifold-trace export (Bloch registers + coupling edges)
     GET  /beliefs?node=&role=   one belief read (raw bloch; domains apply their own
                             read convention client-side)
     GET  /recommendations   the shadow layer — decisions that would have dispatched
@@ -193,6 +194,14 @@ class WorldHost:
         with self.lock:
             return jsonable(graph_state(self.engine))
 
+    def cognifold(self) -> dict:
+        """The cognifold-trace export — belief registers (Bloch spherical geometry + unified
+        gauge) + coupling edges, for a per-register field renderer. Cheap read, same discipline
+        as /state (never engine.context())."""
+        from umwelt.projection.cognifold_trace import cognifold_trace
+        with self.lock:
+            return jsonable(cognifold_trace(self.engine, world=self.name))
+
     def belief(self, node: str, role: str) -> dict:
         from umwelt.host.api import _forecast_skill
         with self.lock:
@@ -282,6 +291,8 @@ class _Handler(BaseHTTPRequestHandler):
                 self._send(200, self.host.health())
             elif url.path == "/state":
                 self._send(200, self.host.state())
+            elif url.path == "/cognifold":
+                self._send(200, self.host.cognifold())
             elif url.path == "/recommendations":
                 self._send(200, self.host.recommendations())
             elif url.path == "/bindings":

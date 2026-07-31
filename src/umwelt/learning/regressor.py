@@ -54,6 +54,11 @@ class OnlineRegressor:
         self.project_ball = bool(project_ball)
         self.error_mode = str(error_mode)
         self.error_ema: float | None = None           # rolling normalized error
+        # Persistence-baseline error EMA (predict-last-value). Only accumulates when
+        # update() is called with baseline_pred → skill_vs_persistence measures foresight
+        # OVER "predict the current value", killing the frozen-belief mirage where absolute
+        # skill reads ~1.0 for a belief that never moves.
+        self.baseline_error_ema: float | None = None
         self.per_target_err: NDArray[np.floating] | None = None
         self.n_updates = 0
         self._last_pred: NDArray[np.floating] | None = None
@@ -99,9 +104,15 @@ class OnlineRegressor:
         lr: float | None = None,
         l2: float | None = None,
         ema: float | None = None,
+        baseline_pred: NDArray[np.floating] | None = None,
     ) -> None:
         """One online step: train features → label. lr/l2/ema, when given, come
-        live from the parameter fiber (calibrated, not buried constants)."""
+        live from the parameter fiber (calibrated, not buried constants).
+
+        baseline_pred, when given, is the naive persistence forecast (predict the
+        value current at prediction time) in the SAME normalized space as label; its
+        abs error is EMA'd into baseline_error_ema so skill_vs_persistence can grade
+        the model against "predict-last-value" instead of against zero."""
         if lr is not None:
             self.lr = lr
         if l2 is not None:
@@ -135,6 +146,11 @@ class OnlineRegressor:
         self.error_ema = e if self.error_ema is None else (
             self.ema * e + (1.0 - self.ema) * self.error_ema
         )
+        if baseline_pred is not None:
+            be = float(np.mean(np.abs(label - np.asarray(baseline_pred, dtype=float))))
+            self.baseline_error_ema = be if self.baseline_error_ema is None else (
+                self.ema * be + (1.0 - self.ema) * self.baseline_error_ema
+            )
 
     @property
     def skill(self) -> float:
@@ -142,6 +158,21 @@ class OnlineRegressor:
         if self.error_ema is None:
             return 0.0
         return max(0.0, 1.0 - self.error_ema)
+
+    @property
+    def skill_vs_persistence(self) -> float:
+        """SIGNED foresight over the naive persistence forecast: 1 − error_ema/baseline_error_ema.
+
+        > 0  the model beats predict-last-value (genuine foresight);  ≈ 0 it merely ties it;
+        < 0  it is WORSE than doing nothing. Signed on purpose so a DENIED result shows a
+        negative number (the CLAIMS discipline). Returns 0.0 when no baseline has been fed
+        OR when persistence is ~perfect (a frozen belief: baseline_error≈0) — the exact case
+        the absolute `skill` inflates to ~1.0, here honestly reported as "no foresight to add"."""
+        if self.error_ema is None or self.baseline_error_ema is None:
+            return 0.0
+        if self.baseline_error_ema < 1e-9:
+            return 0.0
+        return 1.0 - self.error_ema / self.baseline_error_ema
 
     @property
     def weight_norm(self) -> float:
@@ -170,6 +201,7 @@ class OnlineRegressor:
             "n_updates": self.n_updates,
             "error_ema": round_or_none(self.error_ema, 4),
             "skill": round(self.skill, 4),
+            "skill_vs_persistence": round(self.skill_vs_persistence, 4),
             "lr": round(self.lr, 5), "l2": round(self.l2, 7), "ema": round(self.ema, 4),
             "weight_norm": round(self.weight_norm, 4),
         }

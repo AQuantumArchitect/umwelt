@@ -178,6 +178,27 @@ def build_engine(
     apply_seed_profile(engine, seed_profile or seed_profile_from_env())
     if role is not None:
         set_role(engine, role)
+
+    # ── SELF-FORECAST ORGAN (the third brain) ──
+    # If the spec declares forecast leaves, attach a ForecastSurface so the field
+    # anticipates its OWN future — each leaf predicts its Bloch-z forward on a φ-ladder,
+    # graded against what actually happens (confidence = skill × purity). `engine.ingest`
+    # steps it every full tick; `cognifold_trace` renders the ladder. Empty (the default)
+    # → forecast_surface stays None, byte-identical to a world that doesn't foresee itself.
+    _fc_leaves = tuple(getattr(spec, "forecast_leaves", ()) or ())
+    if _fc_leaves:
+        from umwelt.foresight.forecast_rollout import make_forecast_surface
+        from umwelt.foresight.forecast_surface import DEFAULT_HORIZONS_MIN
+        _fc_hz = tuple(getattr(spec, "forecast_horizons_min", ()) or ()) or DEFAULT_HORIZONS_MIN
+        # When the spec asks for it, each leaf also sees the cross-leaf displacement
+        # (collapse-surprise) vector — width = one slot per leaf. Off → n_context=0 → the
+        # channel is empty and the surface is byte-identical to a self-only forecast.
+        _fc_ctx = len(_fc_leaves) if getattr(spec, "forecast_context_surprise", False) else 0
+        _fc_order = int(getattr(spec, "forecast_interaction_order", 2) or 2)
+        engine.forecast_surface = make_forecast_surface(
+            leaves=_fc_leaves, horizons_min=_fc_hz, n_context=_fc_ctx, interaction_order=_fc_order)
+        logger.info("self-forecast organ attached: %d leaves × %d horizons (context=%d)",
+                    len(_fc_leaves), len(_fc_hz), _fc_ctx)
     return engine
 
 

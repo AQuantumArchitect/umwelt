@@ -51,6 +51,8 @@ python_files = [
     "deconfound_smoke.py",
     "gamma_walk.py",
     "fledgeling_fog_blank.py",
+    "selection_walk.py",
+    "higher_order_live_null.py",
 ]
 markers = [
     "slow: long-running evidence harness (still runs in the default gate)",

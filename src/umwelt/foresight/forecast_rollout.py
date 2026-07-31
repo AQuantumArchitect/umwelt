@@ -358,10 +358,14 @@ def dissolve_enabled() -> bool:
     return env_flag("UMWELT_FORECAST_DISSOLVE")
 
 
-def make_forecast_surface(leaves=None, horizons_min=None, lr: float = 0.03, l2: float = 0.005):
+def make_forecast_surface(leaves=None, horizons_min=None, lr: float = 0.03, l2: float = 0.005,
+                          n_context: int = 0, interaction_order: int = 2):
     """Gated factory: the dissolved (rollout, no-W) forecast surface when UMWELT_FORECAST_DISSOLVE is
-    set, else the trained ForecastSurface (default)."""
+    set, else the trained ForecastSurface (default). n_context>0 turns on the self-discovering
+    higher-order context (trained surface only); interaction_order sets the monomial order (2 =
+    pairwise products, the useful default that carries both single-parent deps and pure synergy)."""
     if dissolve_enabled():
         return DissolvedForecastSurface(leaves=leaves, horizons_min=horizons_min, lr=lr, l2=l2)
     from umwelt.foresight.forecast_surface import ForecastSurface, DEFAULT_HORIZONS_MIN
-    return ForecastSurface(leaves=leaves, horizons_min=horizons_min or DEFAULT_HORIZONS_MIN, lr=lr, l2=l2)
+    return ForecastSurface(leaves=leaves, horizons_min=horizons_min or DEFAULT_HORIZONS_MIN,
+                           lr=lr, l2=l2, n_context=n_context, interaction_order=interaction_order)
