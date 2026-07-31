@@ -95,3 +95,57 @@ def test_dispatcher_receives_non_shadow_auto_actions():
     _drive(engine, "cell_1_1", 20, t0)
     assert sent, "non-shadow auto tendrils must reach the injected dispatcher"
     assert any(a.actuator_id == "harvester_1" for a in sent)
+
+
+def _refire_engine():
+    spec = grid_spec_with_outputs()
+    outputs = tuple(
+        replace(o, shadow=False, gates={**o.gates, "refire_s": 5.0})
+        if o.name == "harvest" else replace(o, shadow=False)
+        for o in spec.outputs
+    )
+    sent = []
+    from umwelt.boot import build_engine
+    engine = build_engine(spec=replace(spec, outputs=outputs), dispatch=sent.append)
+    return engine, sent
+
+
+def test_refire_redispatches_unchanged_command_while_committed():
+    """gates.refire_s: an actuator that consumes events (not states) gets an honest
+    repeat of the unchanged command while the committed belief stays engaged — the
+    alternative apps invented was forging cool/warm observation edges to re-arm."""
+    engine, _ = _refire_engine()
+    t0 = datetime(2026, 1, 5, 12, 0, tzinfo=timezone.utc)
+    _drive(engine, "cell_1_1", 20, t0)
+
+    harvest = engine.tendrils[0]
+    assert harvest.commit.level > 0.5
+    base = harvest.last_dispatch_ts()
+    assert base is not None
+
+    # inside the refire window the unchanged command stays suppressed
+    assert harvest.step(now_ts=base + 1.0) is None
+    # due: the SAME command re-dispatches, no observation forgery required
+    again = harvest.step(now_ts=base + 5.1)
+    assert again is not None and again.command["on"] is True
+    assert again.reason == "harvest_auto"
+
+    # refire_s=0 (the default) keeps the classic change-only law
+    harvest.refire_s = 0.0
+    assert harvest.step(now_ts=base + 3600.0) is None
+
+
+def test_refire_stops_when_commitment_decays():
+    engine, _ = _refire_engine()
+    t0 = datetime(2026, 1, 5, 12, 0, tzinfo=timezone.utc)
+    _drive(engine, "cell_1_1", 20, t0)
+    _drive(engine, "cell_0_0", 60, t0, offset=20)
+
+    harvest = engine.tendrils[0]
+    assert harvest.commit.level < 0.5
+    base = harvest.last_dispatch_ts() or 0.0
+    # the first far-future step may legitimately dispatch the sticky OFF flip
+    harvest.step(now_ts=base + 10.0)
+    # after that the command is unchanged and the belief is disengaged: no refire
+    assert harvest.step(now_ts=base + 20.0) is None
+    assert harvest.step(now_ts=base + 3600.0) is None

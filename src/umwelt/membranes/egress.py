@@ -127,6 +127,13 @@ class SpecTendril(Tendril):
         g = dict(spec.gates or {})
         self.enable_param = g.get("enable_param")          # root fiber gate, else always-on
         self.rate_limit_s = float(g.get("rate_limit_s", 30.0))
+        # refire_s > 0: while the committed belief stays engaged (level >= 0.5),
+        # re-dispatch the UNCHANGED command every refire_s — for actuators that
+        # consume events rather than hold states (a work queue, a swarm nudge).
+        # 0 disables (classic change-only dispatch). Without this, an app whose
+        # actuator needs repeat triggers is pushed to forge cool/warm observation
+        # edges to re-arm the tendril — worse for the field than an honest repeat.
+        self.refire_s = float(g.get("refire_s", 0.0))
         self.deadband = float(g.get("deadband", 0.05))
         self.echo_window = float(g.get("echo_window", 300.0))
         self._decoder, self._decoder_params = resolve_decoder(spec)
@@ -179,7 +186,11 @@ class SpecTendril(Tendril):
                 and now_ts - self._last_dispatch_ts < self.rate_limit_s):
             return None
         if command == self._last_command and self._last_command is not None:
-            return None                                     # nothing new to say
+            refire_due = (self.refire_s > 0.0 and level >= 0.5
+                          and self._last_dispatch_ts is not None
+                          and now_ts - self._last_dispatch_ts >= self.refire_s)
+            if not refire_due:
+                return None                                 # nothing new to say
         desired = command.get("value", 1.0 if command.get("on") else 0.0)
         if not self.out_of_preference(float(desired), self.observed(), self.deadband):
             return None                                     # reality already holds it

@@ -146,7 +146,7 @@ class OutputSpec:
     codomain: tuple = (0.0, 1.0)            # device-unit clamp at the edge
     readback_sensor: str | None = None      # signal id watched for user corrections
     reward_channel: str = "override"        # which reward channel corrections release
-    gates: dict = field(default_factory=dict)     # enable_param, rate_limit_s, deadband, ...
+    gates: dict = field(default_factory=dict)     # enable_param, rate_limit_s, refire_s, deadband, ...
     coupling: dict = field(default_factory=dict)  # committed-belief geometry: rest, priors
     dispatch: dict = field(default_factory=dict)  # opaque routing payload for the app dispatcher
     shadow: bool = True
