@@ -220,7 +220,7 @@ def actuator_competence(reservoir: Any) -> dict[str, dict]:
     member tendrils. Read-only and cheap (one small param walk + O(1) EMA reads); feeds the
     autonomy report / the /home Watch⇄Run switch so each actuator's earning is VISIBLE. It
     gates nothing yet — flips stay operator-owned (observe-first, the b9.3 cutover law)."""
-    from umwelt.learning.autonomy import REGISTRY
+    from umwelt.learning.actuator_autonomy import REGISTRY
     out: dict[str, dict] = {}
     for entry in REGISTRY:
         members = _registry_members(reservoir, entry)

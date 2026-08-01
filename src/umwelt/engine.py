@@ -295,7 +295,7 @@ class BeliefEngine:
         # Agency qubit: the act↔listen axis as one Bloch qubit in the meta-param stack —
         # driven by the silence lever, healing toward 'recommend' over weeks. The smooth/axiomatic
         # layer atop the scalar actuation_silenced floor; downstream reads its |act⟩/|listen⟩.
-        from umwelt.learning.agency import AgencyQubit
+        from umwelt.learning.agency_qubit import AgencyQubit
         # tau_days (the weeks-scale agency relaxation constant) is a fiber prior
         # (calibratable + gauge-tracked), default 10.0.
         self.agency = AgencyQubit(tau_days=self._root_param("agency_tau_days", 10.0))

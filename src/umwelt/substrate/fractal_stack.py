@@ -73,7 +73,7 @@ from umwelt.substrate.graph import WorldGraph
 # Single source of the golden-ratio clock, shared with the parameter
 # meta-tower (MetaStack). PHI / Fibonacci strides / effective_stride all live
 # in phi_clock so both towers climb exactly the same ladder.
-from umwelt.clocks.phi_clock import PHI, fib_strides, fib_strides_at, effective_stride as _effective_stride
+from umwelt.substrate.phi_clock import PHI, fib_strides, fib_strides_at, effective_stride as _effective_stride
 
 logger = logging.getLogger(__name__)
 

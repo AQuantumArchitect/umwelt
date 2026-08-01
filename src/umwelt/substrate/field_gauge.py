@@ -24,7 +24,7 @@ import time
 from pathlib import Path
 
 from umwelt.substrate import field_unify
-from umwelt.projection import shelf
+from umwelt.substrate import shelf
 
 _REPO = Path(__file__).resolve().parents[2]
 

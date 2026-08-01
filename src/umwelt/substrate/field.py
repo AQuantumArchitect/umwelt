@@ -25,7 +25,6 @@ from numpy.typing import NDArray
 from umwelt.substrate.graph import WorldGraph
 from umwelt.substrate.cluster import QubitCluster
 from umwelt.substrate.fractal import fractal_signature, fractal_dimension_estimate
-from umwelt.projection.emoji import cluster_emoji, purity_emoji, field_summary, correlation_emoji
 
 logger = logging.getLogger(__name__)
 
@@ -409,6 +408,11 @@ class QuantumField:
 
     def emoji_state(self) -> str:
         """Emoji summary of the full field state."""
+        # Late-bound (R7.5): emoji rendering is a projection subsystem and
+        # substrate must not import upward at module load; this display-only
+        # method is the sole consumer.
+        from umwelt.projection.emoji import cluster_emoji, field_summary
+
         zone_emojis = {}
         zone_purities = {}
         for name, cluster in self.clusters.items():

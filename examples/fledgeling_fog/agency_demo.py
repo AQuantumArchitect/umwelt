@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from examples.fledgeling_fog.world import FOG_SPEC
 from umwelt.host import GameHost
-from umwelt.host.agency_loop import (
+from umwelt.host.subroutines import (
     AgencyLoop,
     AttentionBudget,
     PromotionGate,
