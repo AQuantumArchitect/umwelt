@@ -80,7 +80,7 @@ class BeliefEngine:
 
     def __init__(
         self,
-        gamma: float = 0.05,
+        gamma: float | None = None,
         dt: float = 0.01,
         bridge_strength: float = 0.5,
         collapse_interval: int = 10,
@@ -94,6 +94,8 @@ class BeliefEngine:
         cluster_filter: "Callable[[object], bool] | None" = None,
         subdomains: bool = False,
     ):
+        from umwelt.substrate.param_bundles import resolve_gamma
+        gamma = resolve_gamma(gamma)
         self.seed = seed
         if seed is not None:
             random.seed(seed)

@@ -74,7 +74,8 @@ def _state_of(c):
     small dense cluster JOINS the cumulant manifold)."""
     roles = list(c.qubit_roles)
     n = len(roles)
-    gamma = float(getattr(c, "gamma", getattr(getattr(c, "evolver", None), "gamma", 0.05)) or 0.05)
+    from umwelt.substrate.param_bundles import GAMMA_PRIOR
+    gamma = float(getattr(c, "gamma", getattr(getattr(c, "evolver", None), "gamma", GAMMA_PRIOR)) or GAMMA_PRIOR)
     dt = float(getattr(c, "dt", getattr(getattr(c, "evolver", None), "dt", 0.01)) or 0.01)
     if hasattr(c, "_xy"):                                  # CUMULANT — verbatim, exact
         return (np.asarray(c.e1, float), np.asarray(c.e2, float), np.asarray(c._h, float),

@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from umwelt._util import clamp01
 
 GOLDEN_ANGLE = math.pi * (3.0 - math.sqrt(5.0))     # 2π/φ² — the golden angle
 
@@ -98,7 +99,7 @@ class SymbolCodebook:
         freshly minted concept (the membrane growing its vocabulary from experience)."""
         idx, cos = self._nearest(bloch)
         closeness = max(0.0, cos)
-        confidence = max(0.0, min(1.0, float(purity))) * (cos + 1.0) / 2.0
+        confidence = clamp01(purity) * (cos + 1.0) / 2.0
         label = self._label.get(idx)
         minted = False
         if label is None and mint and purity >= self.mint_purity and closeness >= self.mint_closeness:

@@ -14,6 +14,7 @@ Read-only; safe to poll. Feeds /api/transparency → ui/transparency.html (the /
 from __future__ import annotations
 
 from typing import Any
+from umwelt._util import clamp01
 
 
 def _param_row(node_name: str, p: Any) -> dict:
@@ -24,13 +25,13 @@ def _param_row(node_name: str, p: Any) -> dict:
     settled = None
     if prior_sigma:
         try:
-            settled = max(0.0, min(1.0, 1.0 - (p.sigma / prior_sigma)))
+            settled = clamp01(1.0 - (p.sigma / prior_sigma))
         except Exception:
             settled = None
     # position of the value within its hard range, for a bar render
     frac = None
     if lo is not None and hi is not None and hi > lo:
-        frac = max(0.0, min(1.0, (p.value - lo) / (hi - lo)))
+        frac = clamp01((p.value - lo) / (hi - lo))
     snap.update(node=node_name, lo=lo, hi=hi, settled=settled, frac=frac)
     return snap
 

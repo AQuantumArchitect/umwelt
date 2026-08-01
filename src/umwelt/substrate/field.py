@@ -41,7 +41,7 @@ class QuantumField:
     def __init__(
         self,
         graph: WorldGraph,
-        gamma: float = 0.05,
+        gamma: float | None = None,
         dt: float = 0.01,
         bridge_strength: float = 0.5,
         cluster_filter: "Callable[[object], bool] | None" = None,
@@ -49,7 +49,8 @@ class QuantumField:
     ):
         self.graph = graph
         self.bridge_strength = bridge_strength
-        self.gamma = gamma
+        from umwelt.substrate.param_bundles import resolve_gamma
+        self.gamma = resolve_gamma(gamma)
         self.dt = dt
 
         # Cluster backend (Stage-1 cumulant-math swap). Resolution:

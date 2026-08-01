@@ -27,6 +27,7 @@ import math
 
 import numpy as np
 from numpy.typing import NDArray
+from umwelt._util import clamp01
 
 
 # ---------------------------------------------------------------------------------------------------
@@ -311,7 +312,7 @@ class DissolvedForecastSurface:
 
     def _row(self, node, role, z, h):
         import math as _m
-        conf = max(0.0, min(1.0, self._purity.get((node, role), 1.0)))
+        conf = clamp01(self._purity.get((node, role), 1.0))
         pf = None
         if self._now is not None:
             from datetime import timedelta

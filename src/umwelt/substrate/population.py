@@ -88,12 +88,14 @@ class Population:
         self,
         graph: WorldGraph,
         config: PopulationConfig,
-        gamma: float = 0.05,
+        gamma: float | None = None,
         dt: float = 0.01,
         bridge_strength: float = 0.5,
         seed: int | None = None,
     ):
         from umwelt.substrate.params import ParameterBundle
+        from umwelt.substrate.param_bundles import resolve_gamma
+        gamma = resolve_gamma(gamma)
 
         self.graph = graph
         self.config = config

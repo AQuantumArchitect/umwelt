@@ -238,9 +238,11 @@ class CumulantCluster:
 
     is_cumulant = True   # the backend duck-flag the field/reservoir branch on
 
-    def __init__(self, zone_name, qubit_roles, gamma=0.05, dt=0.01,
+    def __init__(self, zone_name, qubit_roles, gamma=None, dt=0.01,
                  gamma_diss=5.0, role_modes=None, connectivity=None,
                  max_feature_level=2):
+        from umwelt.substrate.param_bundles import resolve_gamma
+        gamma = resolve_gamma(gamma)
         self.zone_name = zone_name
         self.qubit_roles = list(qubit_roles)
         self.n_qubits = len(qubit_roles)

@@ -33,6 +33,7 @@ import numpy as np
 from umwelt.clocks.berry_tape import BerryTape, GeometricReturn
 from umwelt.clocks.phi_clock import PHI
 from umwelt.substrate.params import BlochGeometricPhase
+from umwelt._util import clamp01
 
 _LOG_PHI = log(PHI)
 
@@ -65,9 +66,9 @@ class BreathReport:
 
 def _bloch(fill: float, phase: float, purity: float) -> list[float]:
     """Map (fill, phase) in [0,1] to a Bloch vector; purity<1 damps the step (mixed state)."""
-    theta = pi * min(1.0, max(0.0, fill))
+    theta = pi * clamp01(fill)
     phi = 2.0 * pi * phase
-    r = min(1.0, max(0.0, purity))
+    r = clamp01(purity)
     st = sin(theta)
     return [r * st * cos(phi), r * st * sin(phi), r * cos(theta)]
 
@@ -214,7 +215,7 @@ def score_breathing(
     report.peak_powers = [w for _, w in distinct]
     report.golden_ratio_score = _golden_ratio_score(report.dominant_periods, report.peak_powers)
     n_peaks = len(distinct)
-    report.multiplicity = min(1.0, max(0.0, (n_peaks - 1) / 2.0))
+    report.multiplicity = clamp01((n_peaks - 1) / 2.0)
 
     has_returns = 1.0 if report.return_count > 0 else 0.0
     report.breathing_score = (1.0 - report.flatness) * (

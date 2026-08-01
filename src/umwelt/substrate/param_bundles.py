@@ -8,6 +8,16 @@ from umwelt.substrate.graph import WorldGraph
 
 logger = logging.getLogger(__name__)
 
+# THE single source for the 0.05 field-damping prior formerly hand-typed in 7
+# constructors (R7.3). Constructors take gamma=None and resolve it here at init
+# time, via a late import at the call site — no import-time default hazards.
+GAMMA_PRIOR = 0.05
+
+
+def resolve_gamma(gamma: "float | None") -> float:
+    """gamma=None-means-bundle: None resolves to the engine-DNA prior."""
+    return GAMMA_PRIOR if gamma is None else float(gamma)
+
 
 def purge_legacy_calibration_keys(graph: WorldGraph) -> int:
     """Remove `cal_*` keys from the studio bundle if a stale pickle restored
@@ -127,7 +137,7 @@ def configure_param_bundles(graph: WorldGraph, spec=None) -> WorldGraph:
     root = graph.root
     _attach(graph, root.name, {
         # Field dynamics
-        "gamma": (0.05, 0.01, 0.001, 0.3),
+        "gamma": (GAMMA_PRIOR, 0.01, 0.001, 0.3),
         "gamma_diss": (5.0, 1.0, 0.5, 50.0),
         "dt": (0.01, 0.002, 0.001, 0.1),
         "bridge_strength": (0.5, 0.1, 0.0, 1.0),

@@ -457,7 +457,7 @@ def _single_qubit_op(op: ComplexMatrix, qubit: int, n_qubits: int) -> ComplexMat
 def create_reservoir(
     n_qubits: int = 3,
     n_inputs: int = 4,
-    gamma: float = 0.05,
+    gamma: float | None = None,
     dt: float = 0.01,
 ) -> DensityMatrixEvolver:
     """
@@ -473,6 +473,8 @@ def create_reservoir(
     Returns:
         A configured DensityMatrixEvolver.
     """
+    from umwelt.substrate.param_bundles import resolve_gamma
+    gamma = resolve_gamma(gamma)
     dim = 2 ** n_qubits
 
     # Zero Hamiltonian — no speculative dynamics, all drive from data

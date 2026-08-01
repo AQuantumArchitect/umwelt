@@ -35,9 +35,7 @@ from __future__ import annotations
 
 import numpy as np
 
-
-def _clamp01(x: float) -> float:
-    return 0.0 if x < 0.0 else (1.0 if x > 1.0 else float(x))
+from umwelt._util import clamp01 as _clamp01
 
 
 def _roles(cluster) -> list:

@@ -86,7 +86,7 @@ class QubitCluster:
         self,
         zone_name: str,
         qubit_roles: list[str],
-        gamma: float = 0.05,
+        gamma: float | None = None,
         dt: float = 0.01,
         gamma_diss: float | dict[str, float] = 5.0,
         role_modes: dict[str, str] | None = None,
@@ -152,8 +152,10 @@ class QubitCluster:
             input_operators=input_ops,
             dissipative_qubit_indices=dissipative_indices,
         )
-        # Set the live gamma on the evolver (can be updated later)
-        self.evolver.gamma = gamma
+        # Set the live gamma on the evolver (can be updated later);
+        # gamma=None resolves to the engine-DNA prior (param_bundles).
+        from umwelt.substrate.param_bundles import resolve_gamma
+        self.evolver.gamma = resolve_gamma(gamma)
 
         # Per-role gamma_diss: each dissipative qubit gets its own timescale.
         # Accepts a scalar (same rate for all) or dict {role_name: rate}.
