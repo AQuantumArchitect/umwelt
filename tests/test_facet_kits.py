@@ -3,12 +3,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from umwelt.kits.attention import ATTENTION_SPEC, run_attention_baseline
-from umwelt.kits.dream import DREAM_SPEC, run_dream_baseline
-from umwelt.kits.fog import FOG_KIT_SPEC, run_fog_baseline
-from umwelt.kits.market import MARKET_SPEC, run_market_baseline
+from examples.kits.attention import ATTENTION_SPEC, run_attention_baseline
+from examples.kits.dream import DREAM_SPEC, run_dream_baseline
+from examples.kits.fog import FOG_KIT_SPEC, run_fog_baseline
+from examples.kits.market import MARKET_SPEC, run_market_baseline
 
-KIT_ROOT = Path(__file__).resolve().parents[1] / "src" / "umwelt" / "kits"
+KIT_ROOT = Path(__file__).resolve().parents[1] / "examples" / "kits"
 
 
 def test_fog_kit_baseline():

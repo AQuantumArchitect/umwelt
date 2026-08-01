@@ -191,7 +191,7 @@ are in [docs/FIELD_NOTES.md](docs/FIELD_NOTES.md).
 |---|---|---|
 | [Gridworld bot](examples/gridworld/) | Fog-of-war as partial observation; scouting buys η | Proof-gate domain (runs in CI) |
 | [Fledgeling fog corridor](examples/fledgeling_fog/) | Game-shaped places + scout η; host API + multi-mind + agency demos | FL-core Phases 1–4 (CI synthetic) |
-| [FL facet kits](src/umwelt/kits/) | Optional fog / attention / market / dream baselines | Phase 5 kits (CI synthetic) |
+| [FL facet kits](examples/kits/) | Optional fog / attention / market / dream baselines | Phase 5 kits (CI synthetic) |
 | [Resilience recommender](examples/resilience-recommender/) | The recommender feedback loop is the 10.8× trap | Sketch |
 | [Butler](examples/butler/) | LLM parses at their honest η; non-training as privacy | Sketch |
 | [Sentiment ↔ market](examples/sentiment-market/) | Trust-web fusion; ships its own baselines | Sketch |

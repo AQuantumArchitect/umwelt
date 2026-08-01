@@ -41,11 +41,8 @@ ALLOW: dict[str, set[str]] = {
     # SensorBridge.register(zone=…) with no membrane guard (same origin-seam rationale
     # as ingress.py).
     "spec/validate.py": {"zone"},
-    # kits: BindingSpec.zone kwarg (origin seam field name) in declarative specs
-    "kits/fog/cassette.py": {"zone"},
-    "kits/attention/cassette.py": {"zone"},
-    "kits/market/cassette.py": {"zone"},
-    "kits/dream/cassette.py": {"zone"},
+    # (kits moved to examples/kits/ 2026-07-31 — domain vocabulary lives with
+    # the examples now, outside the engine tree this lint patrols.)
 }
 
 
