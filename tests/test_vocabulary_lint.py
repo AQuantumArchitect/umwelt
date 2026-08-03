@@ -41,6 +41,16 @@ ALLOW: dict[str, set[str]] = {
     # SensorBridge.register(zone=…) with no membrane guard (same origin-seam rationale
     # as ingress.py).
     "spec/validate.py": {"zone"},
+    # tools/saturation_audit.py: "zone" is CODE — the auditor folds a world's event
+    # log through each BindingSpec's own normalizer, so it must read b.zone to know
+    # which node/role a stream feeds (same origin-seam rationale as ingress.py and
+    # validate.py). It names no world: it takes any spec and any events.db.
+    "tools/saturation_audit.py": {"zone"},
+    # clocks/cadence_dial.py: "meerkat" is a PROVENANCE citation in the docstring,
+    # crediting where stress_from_field's body axes came from. That is exactly the
+    # honest-docstring case this list exists for — no meerkat anything is named in
+    # code.
+    "clocks/cadence_dial.py": {"meerkat"},
     # (kits moved to examples/kits/ 2026-07-31 — domain vocabulary lives with
     # the examples now, outside the engine tree this lint patrols.)
 }

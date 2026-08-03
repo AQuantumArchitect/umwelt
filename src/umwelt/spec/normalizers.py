@@ -84,6 +84,62 @@ NORMALIZER_FACTORIES: dict[str, Callable[..., Callable[[float], float]]] = {
 }
 
 
+def one_signed_on_nonnegative(spec: "str | dict | Callable") -> str | None:
+    """Is this normalizer's output the same sign for EVERY reading >= 0?
+
+    Returns a human-readable reason if it provably is, else None. The assumption
+    is stated rather than hidden: most sensors post non-negative magnitudes —
+    counts, rates, latencies, queue depths — so "one-signed on [0, inf)" is the
+    domain where a real evidence stream actually lives. A normalizer that is
+    two-sided in principle but one-signed everywhere its sensor can reach
+    delivers one-sided evidence, and a unitary role has no relaxation to undo it.
+
+    Only the engine-shipped types are analyzed. A domain-registered type or a
+    bare callable returns None: unknown is not the same as safe, and this feeds
+    a warning, so guessing would cost more in noise than it buys in coverage.
+    """
+    if callable(spec) and not isinstance(spec, (str, dict)):
+        return None
+    if isinstance(spec, str):
+        spec = {"type": spec}
+    if not isinstance(spec, dict) or "type" not in spec:
+        return None
+    t = spec.get("type")
+
+    # tanh around a transition point: for v >= 0, v - c never changes sign once
+    # the transition sits at or below the origin.
+    if t in ("regime", "threshold"):
+        center = float(spec.get("center", spec.get("threshold", 0.0)))
+        if center > 0:
+            return None
+        sign = "negative" if spec.get("invert") else "positive"
+        where = "center" if t == "regime" else "threshold"
+        return (
+            f"{t} {where}={center:g} sits at or below zero, so every reading >= 0 "
+            f"normalizes {sign}"
+        )
+
+    # Linear map [lo, hi] -> [-1, +1]. Clamped, so only the reachable half matters.
+    if t == "range":
+        try:
+            lo, hi = float(spec["lo"]), float(spec["hi"])
+        except (KeyError, TypeError, ValueError):
+            return None
+        if hi == lo:
+            return f"range lo == hi == {lo:g}, so the binding always normalizes to 0"
+        if lo >= 0:
+            return None                     # v below and above the midpoint both reachable
+        # v >= 0 maps to >= 2*(0-lo)/(hi-lo) - 1; one-signed when that is already >= 0.
+        if -lo >= hi:
+            return (
+                f"range [{lo:g}, {hi:g}] puts its midpoint at or below zero, so every "
+                f"reading >= 0 normalizes positive"
+            )
+        return None
+
+    return None
+
+
 def register_normalizer(name: str, factory: Callable[..., Callable[[float], float]]) -> None:
     """Register a domain normalizer type. `factory(**params)` must return the callable.
     Re-registering an engine-shipped name raises — a domain extends the vocabulary, it

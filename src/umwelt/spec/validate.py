@@ -300,6 +300,45 @@ def validate_spec(spec_or_ref, *, require_shadow: bool = True,
                     "(force_observe=True + collapse_alpha as the reporter's honest "
                     "η) — see docs/NEW_DOMAIN.md, 'Worlds of reports'.")))
 
+    # ── 2c. one_sided_risk (WARNING, never a failure) ────────────────────────────
+    # The saturation scar: a unitary role fed evidence that can only ever push one
+    # way pins at |z|≈1 and stays there — one real incident held z≈+0.95 for 13
+    # days with nothing anywhere reporting it. A dissipative role relaxes back to
+    # ground between readings, so the danger is specific to unitary: no relaxation,
+    # no counter-evidence, no floor.
+    #
+    # WARNING, never a gate, for a reason that is not politeness: a unitary role
+    # fed genuinely two-sided evidence is correct and common, and a spec cannot
+    # know what its stream will contain. Only the dynamic auditor
+    # (umwelt.tools.saturation_audit) sees the actual polarity. This half flags
+    # the shape that makes the failure possible; that half measures whether it
+    # happened.
+    from umwelt.spec.normalizers import one_signed_on_nonnegative
+    from umwelt.spec.roles import role_input_mode as _rim
+
+    _by_target: dict[tuple[str, str], list] = {}
+    for b in (mspec.bindings or ()):
+        _by_target.setdefault((b.zone, b.role), []).append(b)
+
+    _modes = {n.name: (n.role_modes or {}) for n in mspec.nodes}
+    risky: list[str] = []
+    for (zone, role), bs in sorted(_by_target.items()):
+        if (_modes.get(zone, {}).get(role) or _rim(role)) != "unitary":
+            continue
+        reasons = [one_signed_on_nonnegative(b.normalizer) for b in bs]
+        if not all(reasons):
+            continue                        # some binding can still push the other way
+        risky.append(f"{zone}.{role} ({len(bs)} binding(s): {reasons[0]})")
+    if risky:
+        checks.append(CheckResult(
+            "one_sided_risk", True, warning=True, detail=(
+                "unitary role(s) whose every binding is one-signed for non-negative "
+                "readings — belief can saturate at |z|≈1 with no relaxation to bring "
+                "it back: " + "; ".join(risky) + ". If the stream really is one-sided, "
+                "either declare the role dissipative so it relaxes, or add a binding "
+                "carrying the other polarity. Run umwelt.tools.saturation_audit "
+                "against a live event log to see which it is.")))
+
     if resolve_only:
         return report
 
