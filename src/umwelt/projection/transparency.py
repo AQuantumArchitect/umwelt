@@ -9,7 +9,9 @@ This serializer walks the live structure with cheap O(1) reads only — NO densi
   • clusters — the field's belief clusters (roles + Bloch z + purity): the world's organization
   • web      — the learned couplings within each cluster (zz Ising + xy exchange): what's linked to what
 
-Read-only; safe to poll. Feeds /api/transparency → ui/transparency.html (the /transparency page).
+Read-only; safe to poll. In THIS repo the data is served as part of `GET /state` (a strict
+subset of graph_state — see docs/WEBSITE.md); the `/api/transparency` → `ui/transparency.html`
+page exists only in the origin deployment (Meerkat), not here.
 """
 from __future__ import annotations
 

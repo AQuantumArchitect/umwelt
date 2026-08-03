@@ -17,7 +17,8 @@ This serializer is that one projection. It COMPOSES the existing cheap reads —
 SELF-DESCRIBING: every organ carries a `type` tag naming its projection-type, so the frontend maps
 `type → renderer` without knowing the page (one registry, every node that emits a type renders it, at
 every depth — the fractal payoff). Cheap O(1) reads only: NEVER `reservoir.context()` / density-matrix
-rebuild / fractal-bridge recompute — safe to poll + cache on the RDK. See docs/WEBSITE.md, transparency.py.
+rebuild / fractal-bridge recompute — safe to poll + cache on the RDK. docs/WEBSITE.md is the
+surface contract (what serves this and what renderers owe it); see also transparency.py.
 """
 from __future__ import annotations
 
@@ -30,6 +31,8 @@ from umwelt.projection import transparency as _transparency
 KNOWN_ORGAN_TYPES = frozenset({
     "bloch_cluster", "param_fiber", "committed",          # per-node
     "agency", "competence", "run_gauge", "body", "ingest", "summary",   # global
+    "trust_web",                # which sources the system currently distrusts (learned α per leaf)
+    "forecast_comprehension",   # per-cluster foresight geometry (disparity/downstream/meta_surprise)
 })
 
 
@@ -145,6 +148,23 @@ def graph_state(reservoir: Any) -> dict:
         sb = getattr(reservoir, "sensor_bridge", None)
         if sb is not None and hasattr(sb, "unmatched_snapshot"):
             globals_.append({"type": "ingest", "unmatched": sb.unmatched_snapshot()})
+    except Exception:
+        pass
+    try:
+        # the trust web: per-leaf learned observation-trust (innov_ema + alpha) — the headline
+        # "isolates a corrupted source" capability, previously computed but visible nowhere.
+        # Present only when the engine actually carries the organ (UMWELT_LEARN_COLLAPSE path).
+        ot = getattr(reservoir, "_obs_trust", None)
+        if ot is not None and hasattr(ot, "snapshot"):
+            globals_.append({"type": "trust_web", "leaves": ot.snapshot()})
+    except Exception:
+        pass
+    try:
+        # foresight geometry (observe-only by contract — forecast_comprehension.py): exposed
+        # verbatim when a domain attached the organ; absent otherwise, never faked.
+        fc = getattr(reservoir, "forecast_comprehension", None)
+        if fc is not None and hasattr(fc, "comprehend"):
+            globals_.append({"type": "forecast_comprehension", "clusters": fc.comprehend()})
     except Exception:
         pass
     globals_.append({"type": "summary", **snap.get("summary", {})})

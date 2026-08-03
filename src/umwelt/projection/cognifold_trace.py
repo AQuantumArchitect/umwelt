@@ -40,6 +40,7 @@ import math
 from typing import Any
 
 from umwelt.projection import transparency as _transparency
+from umwelt.projection.emoji import node_icon, role_poles
 from umwelt.projection.graph_state import _graph as _resolve_graph
 from umwelt.substrate.backend import is_param_fiber
 from umwelt.substrate.bloch import bloch_radius, qubit_purity
@@ -393,8 +394,18 @@ def cognifold_trace(host_or_engine: Any, *, world: str | None = None) -> dict:
                 berry = None if berry is None else float(berry)
             except Exception:
                 berry = None
+            north_emoji, south_emoji = role_poles(role)
             registers.append({
                 "id": rid, "node": name, "role": role,
+                # The axis's two fixed poles. A viewer that renders a register as
+                # a point between two labelled ends is legible; one that renders
+                # an unlabelled dot is not, whatever else it draws.
+                "north_emoji": north_emoji, "south_emoji": south_emoji,
+                # NODE_ICONS travels with the trace itself (P4, VOCABULARY_CONVENTION.md) —
+                # a renderer that only ever sees this JSON, never the Python registry, still
+                # gets which project/cluster a belief lives on, the way it already gets which
+                # axis a belief measures via north/south_emoji above.
+                "node_icon": node_icon(name),
                 **geom,
                 "value": geom["p0"], "confidence": geom["r_bloch"],
                 "reliability": getattr(belief, "reliability", None),

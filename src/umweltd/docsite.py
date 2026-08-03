@@ -29,6 +29,7 @@ DOC_REGISTRY: "tuple[tuple[str, str, str], ...]" = (
     ("claims", "CLAIMS — the evidence ledger", "CLAIMS.md"),
     ("forge", "The forge — rant to running world", "docs/FORGE.md"),
     ("service", "umweltd — the engine as a service", "docs/SERVICE.md"),
+    ("website", "The web surface — what exists + the contract", "docs/WEBSITE.md"),
     ("new-domain", "Starting a new domain", "docs/NEW_DOMAIN.md"),
     ("spec", "The DomainSpec reference", "docs/SPEC.md"),
     ("changelog", "Changelog", "CHANGELOG.md"),

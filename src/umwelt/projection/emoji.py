@@ -39,6 +39,15 @@ def register_node_icon(node: str, icon: str) -> None:
     NODE_ICONS[node] = icon
 
 
+def node_icon(node: str) -> str:
+    """The node's registered icon, or the neutral fallback for one never registered.
+
+    Mirrors `role_poles`'s honest-fallback shape: a node this repo has never heard of
+    (or one whose domain never wired a `register_node_icon` call) reads as the neutral
+    📍 rather than going unlabeled."""
+    return NODE_ICONS.get(node, _DEFAULT_NODE_ICON)
+
+
 # Correlation glyphs (fractal levels 2+)
 CORRELATION_EMOJI = {
     "strong":      "🔗",  # |correlation| > 0.5
@@ -82,6 +91,17 @@ def qubit_emoji(
     return glyph
 
 
+def role_poles(role: str) -> tuple[str, str]:
+    """The role's two FIXED axis poles: (warm/pos, cold/neg).
+
+    Distinct from `qubit_emoji`, which renders where a belief currently SITS on
+    that axis. A viewer needs both: the poles label what the axis measures, the
+    state glyph says where it is. Falls back to the neutral pair for roles a
+    domain never registered, so an axis is never anonymous."""
+    emap = ROLE_EMOJI.get(role, _DEFAULT_EMOJI)
+    return emap["pos"], emap["neg"]
+
+
 def cluster_emoji(
     bloch_dict: dict[str, NDArray[np.floating]],
 ) -> str:
@@ -123,12 +143,18 @@ def field_summary(
     node_emojis: dict[str, str],
     node_purities: dict[str, float],
     bridge_strengths: dict[tuple[str, str], float] | None = None,
+    node_icons: dict[str, str] | None = None,
 ) -> str:
     """Render a full-field summary as a compact text block: one line per node
-    (icon, per-role glyphs, purity), plus a bridges line when correlations exist."""
+    (icon, per-role glyphs, purity), plus a bridges line when correlations exist.
+
+    `node_icons` lets a caller supply icons that traveled WITH its data (e.g. a
+    cognifold trace's per-register `node_icon`) instead of this process's own
+    NODE_ICONS registry — a client rendering a world it never imported still
+    shows the world's real icons, not a page of 📍."""
     lines = []
     for node, emojis in node_emojis.items():
-        icon = NODE_ICONS.get(node, _DEFAULT_NODE_ICON)
+        icon = (node_icons or NODE_ICONS).get(node, _DEFAULT_NODE_ICON)
         pur = purity_emoji(node_purities.get(node, 1.0))
         lines.append(f"  {icon} {node:10s} {emojis}  {pur}")
 

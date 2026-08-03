@@ -11,6 +11,7 @@ push a batch, read a belief, snapshot) a command instead of a snippet.
     umweltctl ingest --world market --file batch.json
     umweltctl belief --world market --node aapl --role drift
     umweltctl cognifold --world market
+    umweltctl brief --world market            # the human read (add --json for the dict)
     umweltctl snapshot --world market
     umweltctl stop --world market
     umweltctl start --world market
@@ -78,6 +79,24 @@ def cmd_recommendations(args) -> None:
     _print(_client(args).recommendations())
 
 
+def cmd_brief(args) -> None:
+    """The universal human read of a world — glyph lines, movers, staleness, shadow
+    decisions — composed purely from the worker's own wire payloads (projection/brief.py).
+    `--json` prints the exact dict the prose was formatted from."""
+    from umwelt.projection.brief import compose_brief, render_brief
+    c = _client(args)
+    recs = None
+    try:
+        recs = c.recommendations()
+    except Exception:
+        pass                                    # a world with no output surface still briefs
+    brief = compose_brief(c.health(), c.cognifold(), recs)
+    if args.json:
+        _print(brief)
+    else:
+        print(render_brief(brief))
+
+
 def cmd_bindings(args) -> None:
     _print(_client(args).bindings())
 
@@ -126,6 +145,13 @@ def build_parser() -> argparse.ArgumentParser:
         p = sub.add_parser(name, help=help_)
         p.add_argument("--world", required=True)
         p.set_defaults(func=fn)
+
+    p = sub.add_parser(
+        "brief", help="the universal human read of a world (glyphs, movers, shadow)")
+    p.add_argument("--world", required=True)
+    p.add_argument("--json", action="store_true",
+                   help="print the source dict instead of prose (same data)")
+    p.set_defaults(func=cmd_brief)
 
     p = sub.add_parser("belief", help="one raw-Bloch belief read")
     p.add_argument("--world", required=True)

@@ -75,6 +75,11 @@ the word into your own package, not to widen the allow-list lightly).
 `examples/smarthome/vocabulary.py` is the worked pattern:
 `register_role_mode`, `register_normalizer`, a custom `DriverSpec` type.
 
+Register a glyph for every role and node too (`register_role_emoji`/`register_node_icon`) — see
+[VOCABULARY_CONVENTION.md](VOCABULARY_CONVENTION.md) for the shape. `tests/
+test_world_vocabulary_coverage.py` fails loudly on anything left generic; don't rely on eyeballing
+a screenshot to catch it.
+
 ## 3. Boot blank and check the ingest gap
 
 Before anything else, run the one-command spec gate — it packages every check below

@@ -210,3 +210,33 @@ def test_node_organs_attach_to_owning_node():
             if o["type"] == "param_fiber":
                 assert all(p["node"] == n["name"] for p in o["params"])
     assert "grid" in by_name        # the root is present
+
+
+def test_trust_web_organ_surfaces_when_attached():
+    """The learned observation-trust web (the 'isolates a corrupted source' capability) must
+    surface as a typed global organ when the engine carries it — previously computed but
+    visible nowhere — and stay absent (never faked) when it doesn't."""
+    from umwelt.learning.observation_trust import ObservationTrust
+
+    engine = _engine()
+    assert _global(G.graph_state(engine), "trust_web") is None    # honest absence
+    ot = ObservationTrust()
+    ot.learned_alpha(("cell_0_0", "resource"), obs_z=0.9, belief_z=-0.9)   # noisy source
+    engine._obs_trust = ot
+    tw = _global(G.graph_state(engine), "trust_web")
+    assert tw is not None and "cell_0_0.resource" in tw["leaves"]
+    leaf = tw["leaves"]["cell_0_0.resource"]
+    assert {"innov_ema", "alpha"} <= set(leaf)
+
+
+def test_forecast_comprehension_organ_surfaces_when_attached():
+    """Foresight geometry (observe-only by contract) rides the same additive pattern."""
+    class _FC:
+        def comprehend(self):
+            return {"pantry": {"disparity": 0.2, "downstream": 0.0, "meta_surprise": 0.3}}
+
+    engine = _engine()
+    assert _global(G.graph_state(engine), "forecast_comprehension") is None
+    engine.forecast_comprehension = _FC()
+    fc = _global(G.graph_state(engine), "forecast_comprehension")
+    assert fc is not None and fc["clusters"]["pantry"]["meta_surprise"] == 0.3
