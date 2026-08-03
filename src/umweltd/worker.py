@@ -56,6 +56,24 @@ logger = logging.getLogger("umweltd.worker")
 
 FLUSH_SECS_DEFAULT = 30.0
 
+# --- orphan reaping -------------------------------------------------------
+# A worker outlives its supervisor whenever the supervisor is hard-killed:
+# TerminateProcess (what Popen.terminate() does on Windows) skips the
+# supervisor's `finally: sup.stop(name)` entirely, so nothing reaps the
+# children. tests/test_supervisor_smoke.py::test_supervisor_lifecycle does
+# exactly that -- its last act is POST /worlds/grid/start, then
+# sup.terminate() -- and it leaked a worker pair that ran for ten hours
+# against a world directory pytest had already deleted.
+#
+# Watching the parent PID is the obvious guard and the wrong one here: the
+# worker's parent is a launcher shim, not the supervisor. The world DIRECTORY
+# is the honest liveness signal -- a worker whose world no longer exists has
+# nothing left to serve, whoever killed it. Two consecutive misses, because
+# these directories live under Syncthing: a peer's delete should be obeyed,
+# a single stat blip should not.
+ORPHAN_CHECK_S = 30.0
+ORPHAN_STRIKES = 2
+
 
 def _call_ref(ref: str) -> None:
     module_name, _, attr = ref.partition(":")
@@ -324,6 +342,31 @@ class _Handler(BaseHTTPRequestHandler):
             self._access_log("POST", t0)
 
 
+def _orphan_watch(world_dir: Path, server, name: str,
+                  every: float = ORPHAN_CHECK_S,
+                  strikes: int = ORPHAN_STRIKES) -> None:
+    """Exit when the world directory goes away. See ORPHAN_CHECK_S.
+
+    Deliberately does NOT snapshot on the way out: the directory is gone, and
+    writing one would recreate the very world that was deleted. The loud line
+    is the point -- a silent exit here reads identically to a crash.
+    """
+    missing = 0
+    while True:
+        time.sleep(every)
+        if world_dir.exists():
+            missing = 0
+            continue
+        missing += 1
+        logger.warning("world %r directory is gone (%d/%d) -- %s", name,
+                       missing, strikes, world_dir)
+        if missing >= strikes:
+            logger.error("world %r ORPHANED: directory deleted, exiting without "
+                         "snapshot (nothing left to serve)", name)
+            server.shutdown()
+            return
+
+
 def serve(world_dir: Path, port: int = 0) -> None:
     host = WorldHost(world_dir)
     _Handler.host = host
@@ -341,6 +384,8 @@ def serve(world_dir: Path, port: int = 0) -> None:
 
     signal.signal(signal.SIGTERM, _shutdown)
     signal.signal(signal.SIGINT, _shutdown)
+    threading.Thread(target=_orphan_watch, args=(world_dir, server, host.name),
+                     daemon=True).start()
     try:
         server.serve_forever()
     finally:
