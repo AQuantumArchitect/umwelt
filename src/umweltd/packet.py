@@ -483,6 +483,12 @@ def cmd_evolve(a) -> int:
         "batches_replayed": batches,
         "freeze_learning": bool(a.freeze_learning),
         "sync_confirm": confirmed,
+        # How this leg's engine got its starting state. "fresh" = --from-log
+        # (nothing restored, nothing to fail). "exact" = the snapshot's whole
+        # walked surface came back. "approximate" = it did not, so this leg may
+        # fork from a from-log referee even with rng_state resumed — the release
+        # says so up front rather than leaving it for the referee to discover.
+        "continuation": getattr(engine, "_continuation", "unknown"),
     }
     _update_own_bid(world, a.node, release=release)
     print(json.dumps({"evolved": True, "node": a.node, **release}, indent=1))
@@ -521,6 +527,12 @@ def cmd_verify(a) -> int:
                             "match": bool(ok_sha)},
         "release_node": rel.get("node"), "referee_node": a.node,
         "batches_replayed": batches, "cursor": last_ts,
+        # The referee itself always replays from-log, so its own continuation is
+        # "fresh" and says nothing. What matters is what the RELEASE claimed: a
+        # release stamped "approximate" that nonetheless verifies is a chain that
+        # got away with it, and one stamped "approximate" that fails is explained.
+        "continuation": {"release": rel.get("continuation"),
+                         "referee": getattr(engine, "_continuation", "unknown")},
     }
     print(json.dumps(verdict, indent=1))
     if a.hearth_url:
