@@ -202,7 +202,7 @@ def test_snapshot_rng_state_steers_the_incremental_replay(tmp_path):
 # ── 2. the north star: incremental evolve == from-log referee (OPEN — xfail) ───────
 
 @pytest.mark.xfail(
-    strict=False,
+    strict=True,
     reason="continuation-state closure OPEN: engine.save does not yet capture the "
            "full live-state surface (calibration/sensor-bridge/berry/driver/hold "
            "memory, ~800 slots enumerated 2026-07-18), so a learning-hot tail "
