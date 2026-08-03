@@ -41,6 +41,9 @@ ALLOW: dict[str, set[str]] = {
     # SensorBridge.register(zone=…) with no membrane guard (same origin-seam rationale
     # as ingress.py).
     "spec/validate.py": {"zone"},
+    # transparency.py: "meerkat" is the provenance citation in the module docstring
+    # crediting the origin deployment (same rationale as _util.py / spec/schema.py).
+    "projection/transparency.py": {"meerkat"},
     # (kits moved to examples/kits/ 2026-07-31 — domain vocabulary lives with
     # the examples now, outside the engine tree this lint patrols.)
 }

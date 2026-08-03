@@ -45,8 +45,14 @@ def run_validation(module_dir: Path, spec_ref: str, *,
     """
     module_dir = Path(module_dir)
     env = os.environ.copy()
+    # Absolute path to this package's own src/ (parent of both umweltforge/ and
+    # umwelt/) — NOT whatever PYTHONPATH the caller happened to inherit. The
+    # subprocess's cwd is module_dir (a workspace dir elsewhere), so a relative
+    # entry in an inherited PYTHONPATH resolves against the wrong directory and
+    # silently drops `umwelt` off sys.path (ModuleNotFoundError).
+    engine_src = str(Path(__file__).resolve().parent.parent)
     env["PYTHONPATH"] = os.pathsep.join(
-        [str(module_dir), env.get("PYTHONPATH", "")]).rstrip(os.pathsep)
+        [str(module_dir), engine_src, env.get("PYTHONPATH", "")]).rstrip(os.pathsep)
     try:
         out = subprocess.run(
             [sys.executable, "-m", "umwelt.spec.validate", spec_ref, "--json"],
