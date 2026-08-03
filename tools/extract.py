@@ -41,7 +41,7 @@ MAP = {
     "world_graph": "substrate.graph", "world_model": "substrate.ground",
     # projection
     "gauge": "projection.gauge", "gauge_name": "projection.gauge_name",
-    "emoji": "projection.emoji", "shelf": "projection.shelf",
+    "emoji": "projection.emoji", "shelf": "substrate.shelf",
     "graph_state": "projection.graph_state", "transparency": "projection.transparency",
     # clocks / learning / foresight (incl. forward targets for lazy imports)
     "phi_clock": "clocks.phi_clock", "adaptive_clock": "clocks.adaptive_clock",
@@ -131,7 +131,7 @@ FROZEN: set[str] = {
     "substrate/population.py", "substrate/params.py", "substrate/param_bundles.py",
     "substrate/web_topology.py", "substrate/graph.py", "substrate/ground.py",
     "projection/gauge.py", "projection/gauge_name.py", "projection/emoji.py",
-    "projection/shelf.py", "clocks/phi_clock.py", "learning/meta_idioms.py",
+    "substrate/shelf.py", "clocks/phi_clock.py", "learning/meta_idioms.py",
     # P2 (all curated: blockers 2/5/6, drivers/anchors generalization, vocabulary pass)
     "clocks/adaptive_clock.py", "clocks/cadence_dial.py", "clocks/compute_scheduler.py",
     "clocks/drivers.py", "clocks/berry_tape.py",
