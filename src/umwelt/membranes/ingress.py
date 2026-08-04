@@ -690,12 +690,21 @@ class SensorBridge:
         return n
 
     def list_bindings(self) -> list[dict]:
-        """List all registered signal bindings."""
+        """List all registered signal bindings.
+
+        `mode` is included because it decides how a one-sided evidence stream
+        reads: a dissipative role relaxes toward ground between readings, while a
+        unitary one has no such floor and pins at |z|≈1. A caller grading a
+        stream (umwelt.tools.saturation_audit) cannot tell those two apart
+        without it.
+        """
+        from umwelt.spec.roles import role_input_mode
         return [
             {
                 "sensor_id": b.sensor_id,
                 "node": b.node,
                 "role": b.qubit_role,
+                "mode": role_input_mode(b.qubit_role),
                 "weight": b.weight,
                 "description": b.description,
             }

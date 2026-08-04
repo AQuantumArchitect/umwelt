@@ -65,16 +65,22 @@ CADENCE_META_KEYS = ("cadence_w_demand", "cadence_w_stress", "cadence_w_lag",
 
 
 def stress_from_field(field, node: str = "_body") -> float:
-    """Substrate-stress S ∈ [0,1] from the compute-body cluster's cpu_load + cpu_temp beliefs
-    (Bloch z→[0,1]). Whichever is more stressed gates: temp integrates sustained load, load is
-    the fast signal. `node` names the domain's hardware node; absent → 0 (no stress signal)."""
+    """Substrate-stress S ∈ [0,1] from the compute-body cluster's hardware beliefs
+    (Bloch z→[0,1]). Whichever is more stressed gates.
+
+    Meerkat-RDK origin: cpu_load + cpu_temp on the RDK body node — temp integrates
+    sustained load, load is the fast signal. Extended roles (optional, absent→0):
+      mem_load / load  — host RAM / hive-ops seat load (Windows body parallel)
+    `node` names the domain's hardware node; absent cluster → 0 (no stress signal).
+    """
     body = getattr(field, "clusters", {}).get(node) if field is not None else None
     if body is None:
         return 0.0
     ri = getattr(body, "role_index", {})
     def b(role):
         return (float(body.role_bloch(role)[2]) + 1.0) / 2.0 if role in ri else 0.0
-    return max(b("cpu_load"), b("cpu_temp"))
+    # max across body axes — any hard-stressed channel protects the substrate
+    return max(b("cpu_load"), b("cpu_temp"), b("mem_load"), b("load"))
 
 
 def lag_to_L(lag_seconds: float, bundle=None) -> float:

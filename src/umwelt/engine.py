@@ -330,6 +330,12 @@ class BeliefEngine:
         self._step = 0
         self._web_topology = None   # fractal-web (lazy; gated UMWELT_LEARNED_TOPOLOGY)
 
+        # How this engine's state got here: "fresh" (built, never loaded) or the
+        # verdict load() reached — exact / approximate / legacy / unavailable.
+        # A from-log boot is "fresh" and that is the honest word for it: nothing
+        # was restored, so there is nothing that could have failed to restore.
+        self._continuation = "fresh"
+
         # Stasis lever (the pause switch). When True, ingest() caches signal
         # readings (the surface stays live) but does NOT evolve the field,
         # collapse, learn, or run population/fractal — the brain is frozen,
@@ -1728,8 +1734,19 @@ class BeliefEngine:
             _canon_hash = self.field_canon_hash()   # state) — persisted so the gauge/git layer can track it:
         except Exception:                      # an unchanged hash across a save = empty diff = provable
             _canon_hash = None                 # non-training (clock-tape gauge ↔ git). Best-effort; never fatal.
+        # The CONTINUATION surface's hash — every live slot the reflective walker
+        # can reach, not just the belief field. An incremental boot recomputes it
+        # after load() and compares (see load()'s continuation_check): a mismatch
+        # proves load(save(E)) != E on the declared surface, at the cursor, before
+        # a single tail event replays, for the cost of one walk.
+        #
+        # Necessary, not sufficient — it cannot catch a slot the walker never
+        # reaches. Best-effort exactly like the canon hash above: a diagnostic may
+        # never be the reason a snapshot fails to write.
+        from umwelt.substrate.continuation import continuation_digest
         data = {
             "field_canon_hash": _canon_hash,
+            "continuation_digest": continuation_digest(self),
             # Global RNG stream positions AT THE SNAPSHOT CURSOR. The replay path
             # consumes the process-global `random` stream (qubit_param/params
             # Thompson samples, surprise-tape reservoir draws), so an incremental
@@ -1951,7 +1968,39 @@ class BeliefEngine:
                 "is NOT guaranteed to reproduce a from-log replay's "
                 "field_canon_hash (referee such chains from the log alone)")
 
-        logger.info("Engine state loaded from %s (%d steps)", path, self._step)
+        # The round-trip check. Recomputed AFTER the rng restore so it grades the
+        # engine a caller actually receives, not an intermediate one.
+        self._continuation = self._check_continuation(data)
+
+        logger.info("Engine state loaded from %s (%d steps) — continuation: %s",
+                    path, self._step, self._continuation)
+
+    def _check_continuation(self, data: dict) -> str:
+        """Grade this load: 'exact' | 'approximate' | 'legacy' | 'unavailable'.
+
+        `exact` means the walked surface came back identical — the strongest
+        statement available at the cursor. `approximate` means it did not, which
+        is the honest verdict for every world today and is precisely why this is
+        reported rather than asserted: the packet protocol's referee compares
+        field_canon_hash AFTER a tail, so a chain can look clean at the cursor
+        and fork on its first learning-hot batch. See tools/continuation_diff.py.
+        """
+        want = data.get("continuation_digest")
+        if not want:
+            return "legacy"                      # snapshot predates the digest
+        from umwelt.substrate.continuation import continuation_digest
+        got = continuation_digest(self)
+        if got is None:
+            return "unavailable"                 # the walk itself could not run
+        if got == want:
+            return "exact"
+        logger.warning(
+            "CONTINUATION APPROXIMATE: the snapshot's continuation digest (%s) does "
+            "not match this engine after load (%s). load(save(E)) != E on the "
+            "walked surface, so an incremental leg from here may fork from a "
+            "from-log referee. Enumerate the gap with "
+            "`tools/continuation_diff.py diff` (--stage cursor).", want, got)
+        return "approximate"
 
     def _restore_learned(self, data: dict) -> None:
         """Stamp the slow-learned parameters from a snapshot dict onto the live brain:
