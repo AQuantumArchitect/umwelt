@@ -38,7 +38,16 @@ def test_supervisor_lifecycle(tmp_path):
     env["UMWELTD_API_KEY"] = "test-key-123"
     env["PYTHONPATH"] = os.pathsep.join(
         [str(tmp_path), str(REPO / "src"), str(REPO), env.get("PYTHONPATH", "")])
-    port = 7099
+    # An ephemeral port, not a fixed one. This used to hardcode 7099, which is
+    # also where yurt's hearth_action_router listens — once that became a
+    # permanent resident (2026-08-04) the test's client reached the ROUTER, got
+    # its `{"ok": true}` back, and failed with KeyError: 'name' from a supervisor
+    # that had started fine. A fixed port makes a test assert things about
+    # whatever happens to own it.
+    import socket
+    with socket.socket() as _s:
+        _s.bind(("127.0.0.1", 0))
+        port = _s.getsockname()[1]
     sup = subprocess.Popen(
         [sys.executable, "-m", "umweltd.supervisor", "--port", str(port)], env=env)
     base = f"http://127.0.0.1:{port}"

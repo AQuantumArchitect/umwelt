@@ -43,6 +43,52 @@ WATCHDOG_INTERVAL_S = float(os.environ.get("UMWELTD_WATCHDOG_INTERVAL_S", "10.0"
 CRASH_WINDOW_S = 300.0
 CRASH_GIVEUP_COUNT = 5
 
+# ── the pacemaker ────────────────────────────────────────────────────────────
+# The engine has no background tick: `umweltd.worker` advances only on ingest, so
+# a dissipative world left alone does not idle — it relaxes to its ground state,
+# which under the house sign law is the COLD pole. Unfed worlds do not go quiet,
+# they go confidently wrong. Something must drive them.
+#
+# What that something must NOT be is a fixed wall-clock interval. A world's decay
+# rate is its own property, and `gamma_diss` is not even a constant — calibration
+# channel 5 nudges `gamma_diss_{role}` from live tracking error, so a world that
+# learns its beliefs perish faster than declared should start asking to be fed
+# sooner, with nobody editing anything. That is what a scheduled task can never do.
+#
+# So: each world reports tau from its own measured physics (GET /pace) and the
+# pacemaker services it at a FRACTION of tau. Fast-decaying worlds get fed more
+# often, fresh worlds are not touched at all, and a newly registered world is
+# paced correctly on its first tick with no configuration.
+PACE_ENABLED = os.environ.get("UMWELTD_PACEMAKER", "1") != "0"
+# How much of a decay constant may elapse before a belief stops being evidence.
+# This is the one honest policy number here: not "how often to run", but "how
+# stale is too stale", which is a judgement about evidence rather than a clock.
+PACE_FRACTION = float(os.environ.get("UMWELTD_PACE_FRACTION", "0.3"))
+# Applied to the RESOLUTION deadline instead of PACE_FRACTION. Not a taste knob:
+# resolution is the point past which the membrane discards wall time outright, so
+# this is scheduling margin (the watchdog looks every WATCHDOG_INTERVAL_S), not a
+# decay tolerance. Raising it toward 1.0 trades safety margin for fewer wakeups.
+PACE_RESOLUTION_MARGIN = float(os.environ.get("UMWELTD_PACE_RESOLUTION_MARGIN", "0.9"))
+# Bounds on the derived interval. The floor stops a pathological tau (a world that
+# reports absurdly fast decay) from spinning the hose; the ceiling is the fallback
+# for a world that cannot report tau at all — a world with no measurable step rate
+# is not therefore immortal.
+PACE_FLOOR_S = float(os.environ.get("UMWELTD_PACE_FLOOR_S", "60"))
+PACE_CEILING_S = float(os.environ.get("UMWELTD_PACE_CEILING_S", "3600"))
+PACE_WEBHOOK = os.environ.get("UMWELTD_PACE_WEBHOOK", "http://127.0.0.1:7099")
+PACE_TIMEOUT_S = 5.0
+# Scarcity, if any. Unset => the engine has no opinion about cost and the budget
+# is unlimited; umwelt stays domain-agnostic and yurt supplies the meaning by
+# pointing this at `hive-purse`. Any world can play the role — the engine only
+# needs a warmth in [0,1].
+PACE_BUDGET_WORLD = os.environ.get("UMWELTD_PACE_BUDGET_WORLD", "").strip()
+PACE_BUDGET_NODE = os.environ.get("UMWELTD_PACE_BUDGET_NODE", "purse")
+PACE_BUDGET_ROLE = os.environ.get("UMWELTD_PACE_BUDGET_ROLE", "warmth")
+PACE_BUDGET_MAX = int(os.environ.get("UMWELTD_PACE_BUDGET", "1000"))
+# Never zero. A budget of nothing is a hive that can never observe its way back
+# out of scarcity, and the floor is what lets a cold purse still recover.
+PACE_BUDGET_MIN = int(os.environ.get("UMWELTD_PACE_BUDGET_MIN", "1"))
+
 
 def home() -> Path:
     return Path(os.environ.get("UMWELTD_HOME", Path.home() / ".umweltd"))
@@ -63,6 +109,8 @@ class Supervisor:
         self.desired: set[str] = set()
         self._crash_times: dict[str, list[float]] = {}
         self._watchdog_disabled: set[str] = set()
+        self._pace_last: dict[str, float] = {}
+        self._pace_rank: list[dict] = []
 
     def worlds_root(self) -> Path:
         root = home() / "worlds"
@@ -226,6 +274,196 @@ class Supervisor:
             except Exception as exc:
                 logger.error("world %r auto-restart failed: %r", name, exc)
 
+    # ── pacemaker + sinking ─────────────────────────────────────────────────────
+    def _worker_get(self, name: str, path: str) -> dict | None:
+        """One cheap read from a running worker. None on any failure — a world that
+        cannot answer is simply not paced this tick, never a reason to raise."""
+        wd = WorldDir(self.worlds_root() / name)
+        if not wd.port_path.exists():
+            return None
+        try:
+            port = int(wd.port_path.read_text())
+            with urllib.request.urlopen(
+                    f"http://127.0.0.1:{port}{path}", timeout=PACE_TIMEOUT_S) as resp:
+                return json.loads(resp.read())
+        except Exception:                            # noqa: BLE001 — best-effort probe
+            return None
+
+    def _pace_due(self, pace: dict) -> tuple[bool, float, float | None]:
+        """(due, interval_s, age_s) for one world, from ITS numbers, not a constant."""
+        age = pace.get("age_s")
+        # The two deadlines mean different things and must not share a coefficient.
+        #
+        # DRIFT is a tolerance: "how much decay am I willing to accept", so
+        # PACE_FRACTION genuinely belongs on it.
+        # RESOLUTION is a hard membrane limit: past hold*(cap+1) the catch-up
+        # saturates and the extra wall gap is discarded outright. Taking 30% of a
+        # hard limit just feeds three times more often than necessary — the margin
+        # below is for scheduling jitter, not for taste.
+        drift = pace.get("drift_s")
+        resolution = pace.get("resolution_s")
+        deadlines = []
+        if drift:
+            deadlines.append(PACE_FRACTION * float(drift))
+        if resolution:
+            deadlines.append(PACE_RESOLUTION_MARGIN * float(resolution))
+        if deadlines:
+            tau = min(deadlines)
+        else:
+            # A worker that reports only tau_s does not say WHICH bound it is, so
+            # apply the drift tolerance: feeding a shade too often is recoverable,
+            # under-feeding a fast-decaying world is the failure this exists to stop.
+            raw = pace.get("tau_s")
+            tau = (PACE_FRACTION * float(raw)) if raw else None
+        if tau and tau > 0:
+            interval = min(max(float(tau), PACE_FLOOR_S), PACE_CEILING_S)
+        else:
+            # No measurable step rate yet (a world that has never been fed cannot
+            # report one). Fall back to the ceiling rather than treating unknown
+            # decay as no decay — the same "silence is absence, not health" rule
+            # the rest of the hive runs on.
+            interval = PACE_CEILING_S
+        if age is None:
+            # Never ingested anything. It is maximally stale, not fresh.
+            return True, interval, None
+        return (float(age) >= interval), interval, float(age)
+
+    def pacemaker_tick(self) -> list[dict]:
+        """Feed the worlds that have decayed past usefulness, worst first.
+
+        Two jobs in one pass, because they are the same decision:
+
+        PACING — a world is due when its age exceeds PACE_FRACTION of its own tau.
+        Nothing here knows how often any world "should" run.
+
+        SINKING — under scarcity the tick has a service budget, and worlds are
+        serviced in rank order. A world at the bottom is simply never reached: it
+        is not archived, unregistered or deleted, it just does not get fed, and it
+        comes straight back the moment there is room. Dormancy, not extinction —
+        which is also why umweltd still needs no DELETE route.
+
+        Rank is urgency (how far past due) divided by cost to service. A world that
+        is barely stale and expensive sinks below one that is badly stale and cheap.
+        """
+        if not PACE_ENABLED:
+            return []
+        budget = self.service_budget()
+        candidates = []
+        for entry in self.catalog():
+            name = entry["name"]
+            if not entry.get("running"):
+                continue
+            pace = self._worker_get(name, "/pace")
+            if pace is None:
+                continue
+            due, interval, age = self._pace_due(pace)
+            # Never re-fire inside one due-window: a pulse already in flight has not
+            # had a chance to land, and firing again would stack hoses on a box whose
+            # scarcest resource is memory.
+            last = self._pace_last.get(name, 0.0)
+            if time.time() - last < interval:
+                due = False
+            overdue = (age / interval) if (age is not None and interval > 0) else 99.0
+            candidates.append({
+                "world": name, "due": due, "age_s": age, "interval_s": round(interval, 1),
+                "tau_s": pace.get("tau_s"), "gamma_max": pace.get("gamma_max"),
+                "hottest_axis": pace.get("hottest_axis"),
+                "rank": round(overdue / max(1e-6, self.service_cost(name)), 4),
+            })
+
+        candidates.sort(key=lambda c: -c["rank"])
+        self._pace_rank = candidates
+        fired = []
+        for cand in candidates:
+            if not cand["due"]:
+                continue
+            if len(fired) >= budget and not self._budget_exempt(cand["world"]):
+                cand["skipped"] = "service budget exhausted — sank this tick"
+                logger.info("pacemaker: %r sank (budget %d exhausted)",
+                            cand["world"], budget)
+                continue
+            if self._pulse(cand["world"], cand):
+                self._pace_last[cand["world"]] = time.time()
+                fired.append(cand)
+        return fired
+
+    def service_budget(self) -> int:
+        """How many worlds may be fed this tick.
+
+        With no PACE_BUDGET_WORLD configured this is effectively unlimited, which
+        keeps umwelt domain-agnostic: the engine has no opinion about money. Point
+        it at a world (yurt points it at `hive-purse`) and scarcity becomes a felt
+        belief rather than a configured cap — a cold scarcity signal shrinks the
+        budget, the ranking decides who eats, and the bottom of the stack sinks.
+
+        Nothing is archived, unregistered or deleted by sinking. A sunk world stays
+        a first-class catalog entry and comes straight back when there is room,
+        which is dormancy rather than extinction — and is why umweltd still needs
+        no DELETE route.
+        """
+        if not PACE_BUDGET_WORLD:
+            return PACE_BUDGET_MAX
+        belief = self._worker_get(
+            PACE_BUDGET_WORLD,
+            f"/beliefs?node={PACE_BUDGET_NODE}&role={PACE_BUDGET_ROLE}")
+        if not belief or belief.get("value") is None:
+            # Unreadable scarcity signal is not permission to spend the whole
+            # roster's worth of work — but it must not be a stop either, or a
+            # dead signal freezes the hive. Fall back to the floor.
+            return PACE_BUDGET_MIN
+        try:
+            warmth = float(belief["value"])          # (z+1)/2 in [0, 1]
+        except (TypeError, ValueError):
+            return PACE_BUDGET_MIN
+        span = max(0, PACE_BUDGET_MAX - PACE_BUDGET_MIN)
+        return PACE_BUDGET_MIN + int(round(max(0.0, min(1.0, warmth)) * span))
+
+    def _budget_exempt(self, name: str) -> bool:
+        """The scarcity signal's own world is never sunk.
+
+        Without this the design deadlocks, and quietly: a cold purse shrinks the
+        budget, a shrunken budget can stop the purse's own poster from running,
+        and an unfed purse decays further cold. It would be a hive that starves
+        itself to death by correctly observing that it is starving. Whatever
+        measures scarcity has to be exempt from it.
+        """
+        return bool(PACE_BUDGET_WORLD) and name == PACE_BUDGET_WORLD
+
+    def service_cost(self, name: str) -> float:
+        """Relative cost of feeding this world. 1.0 until the burn face can price a
+        world individually; kept as a seam so ranking is cost-aware by construction
+        rather than retrofitted."""
+        return 1.0
+
+    def _pulse(self, name: str, detail: dict) -> bool:
+        """Ask the action router to run this world's poster.
+
+        Deliberately the SAME envelope a field Action uses (`actuator_id` +
+        `command.on`), so a pulse rides the registry's existing gate, cooldown and
+        risk_class machinery instead of a private side channel. `world_pulse_*`
+        entries are risk_class "safe": they run a read-only scan and post readings,
+        and spend nothing.
+        """
+        payload = {
+            "actuator_id": f"world_pulse_{name.replace('-', '_')}",
+            "command": {"on": True},
+            "source": "umweltd.pacemaker",
+            "why": {k: detail.get(k) for k in
+                    ("age_s", "interval_s", "tau_s", "gamma_max", "hottest_axis")},
+        }
+        try:
+            req = urllib.request.Request(
+                PACE_WEBHOOK, data=json.dumps(payload).encode(), method="POST",
+                headers={"Content-Type": "application/json"})
+            urllib.request.urlopen(req, timeout=PACE_TIMEOUT_S)
+            logger.info("pacemaker: pulsed %r (age %.0fs >= %.0fs, tau %s)",
+                        name, detail.get("age_s") or -1, detail.get("interval_s") or -1,
+                        detail.get("tau_s"))
+            return True
+        except Exception as exc:                     # noqa: BLE001 — a dead router must not kill the loop
+            logger.warning("pacemaker: pulse for %r failed: %r", name, exc)
+            return False
+
     def proxy(self, name: str, rest: str, method: str, body: bytes | None) -> tuple[int, bytes]:
         wd = WorldDir(self.worlds_root() / name)
         if not wd.port_path.exists():
@@ -319,6 +557,14 @@ class _Handler(BaseHTTPRequestHandler):
                 self._send(200, {"ok": True, "worlds": self.sup.catalog()})
             elif parts == ["worlds"] and method == "GET":
                 self._send(200, self.sup.catalog())
+            elif parts == ["pace"] and method == "GET":
+                # The heart, visible. Shows every world's derived interval and its
+                # rank, so "why has nothing fed X" is answerable without reading logs.
+                self._send(200, {
+                    "enabled": PACE_ENABLED, "fraction": PACE_FRACTION,
+                    "floor_s": PACE_FLOOR_S, "ceiling_s": PACE_CEILING_S,
+                    "webhook": PACE_WEBHOOK, "budget": self.sup.service_budget(),
+                    "worlds": self.sup._pace_rank})
             elif parts == ["worlds"] and method == "POST":
                 self._send(201, self.sup.create(json.loads(raw or b"{}")))
             elif len(parts) >= 2 and parts[0] == "worlds":
@@ -362,6 +608,13 @@ def _watchdog_loop(sup: Supervisor) -> None:
             sup.watchdog_tick()
         except Exception:
             logger.exception("watchdog tick failed")
+        # The heart shares the watchdog's thread on purpose: it is one process with
+        # a lifecycle, not a second scheduled task. The tick rate here is only how
+        # often the pacemaker LOOKS; how often it FEEDS is each world's own tau.
+        try:
+            sup.pacemaker_tick()
+        except Exception:
+            logger.exception("pacemaker tick failed")
 
 
 def main() -> None:

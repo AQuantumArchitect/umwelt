@@ -32,6 +32,7 @@ class CompileResult:
     attempts: int = 0
     report: "dict | None" = None       # last parsed ValidationReport.to_dict()
     registered: bool = False
+    parent: str = ""                   # lineage: the spec this one descends from
     error: str = ""
     agent_errors: list = field(default_factory=list)
 
@@ -74,25 +75,60 @@ def run_validation(module_dir: Path, spec_ref: str, *,
     return bool(out.returncode == 0 and report.get("ok")), report
 
 
+def _read_parent(parent: "Path | str | None") -> "tuple[str | None, str | None]":
+    """(source, name) of the spec this world descends from, or (None, None).
+
+    Accepts a module file or a world directory (in which case the single top-level
+    .py is taken — the workspace census already guarantees a forged world is
+    exactly one module, and a hand-written world dir has world.py).
+    """
+    if not parent:
+        return None, None
+    p = Path(parent)
+    if p.is_dir():
+        cand = p / "world.py"
+        if not cand.exists():
+            tops = sorted(q for q in p.glob("*.py") if q.name != "vocabulary.py")
+            if not tops:
+                return None, None
+            cand = tops[0]
+        p = cand
+    try:
+        return p.read_text(encoding="utf-8"), p.stem
+    except OSError:
+        return None, None
+
+
 def compile_world(name: str, rant: str, *, agent: ForgeAgent, client=None,
                   root: "Path | str | None" = None, max_attempts: int = 3,
                   register: bool = True,
+                  parent: "Path | str | None" = None,
                   world_knobs: "dict | None" = None) -> CompileResult:
     """The full pipeline. `client` is an umweltd.client.UmweltClient (or None with
-    register=False for author-and-validate-only)."""
+    register=False for author-and-validate-only).
+
+    `parent` makes the result a VARIANT of an existing world rather than a fresh
+    invention, which is what gives the forge heredity. Selection and variation
+    both existed here before and shared no lineage: every attempt started from
+    nothing, so nothing could accumulate. The gate is unchanged — a variant earns
+    its registration exactly as an original does, from an independent subprocess.
+    """
     if register and client is None:
         raise ValueError("register=True needs a client (or pass register=False)")
 
+    parent_source, parent_name = _read_parent(parent)
     ws = ForgeWorkspace.create(name, rant, root=root)
     spec_ref = ws.spec_ref()
     result = CompileResult(ok=False, world=name, spec_ref=spec_ref,
-                           spec_path=str(ws.root))
+                           spec_path=str(ws.root), parent=parent_name or "")
 
     last_report_json: "str | None" = None
     for attempt in range(1, max(1, int(max_attempts)) + 1):
         result.attempts = attempt
         prompt = authoring_task_prompt(rant, ws.module_file, spec_ref,
-                                       last_report_json=last_report_json)
+                                       last_report_json=last_report_json,
+                                       parent_source=parent_source,
+                                       parent_name=parent_name)
         agent_result = agent.run(
             ws.root, prompt,
             system_prompt=authoring_system_prompt(name, ws.module_file, spec_ref),
@@ -120,5 +156,6 @@ def compile_world(name: str, rant: str, *, agent: ForgeAgent, client=None,
         result.registered = True
     append_ledger(ws.ledger_path, {"world": name, "action": "compiled",
                                    "attempts": result.attempts,
-                                   "registered": result.registered})
+                                   "registered": result.registered,
+                                   "parent": parent_name})
     return result

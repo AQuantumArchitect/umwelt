@@ -116,7 +116,9 @@ any modeling decision a reviewer would question."""
 
 
 def authoring_task_prompt(rant: str, module_file: str, spec_ref: str,
-                          last_report_json: "str | None" = None) -> str:
+                          last_report_json: "str | None" = None,
+                          parent_source: "str | None" = None,
+                          parent_name: "str | None" = None) -> str:
     prompt = f"""\
 Author `{module_file}` (defining SPEC) from this domain description:
 
@@ -125,6 +127,23 @@ Author `{module_file}` (defining SPEC) from this domain description:
 --- end ---
 
 Validate with `python -m umwelt.spec.validate {spec_ref} --json` until exit 0."""
+    if parent_source:
+        # Heredity. Without a parent every forged world is authored from nothing,
+        # so nothing accumulates across attempts — variation with no inheritance
+        # is not evolution, it is repeated invention. With one, a lineage exists,
+        # and `coral/gym_lineage_select.py` finally has world variants to select
+        # between rather than only parameter arms.
+        prompt += f"""
+
+This world is a VARIANT of an existing one ({parent_name}), not a fresh
+invention. Start from its spec and change what the description above asks for.
+Keep what already works, and state in a one-line comment what you changed and
+why. A variant that differs in one deliberate way is worth more than a rewrite,
+because the difference is the thing that can be measured.
+
+--- parent spec ({parent_name}) ---
+{parent_source}
+--- end parent ---"""
     if last_report_json:
         prompt += f"""
 

@@ -44,7 +44,7 @@ import os
 import signal
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -159,9 +159,124 @@ class WorldHost:
         if self.manifest.get("gauge", "live") != "replay":
             set_role(self.engine, ContextState.live())
 
+        # Pacing baseline: a world's decay rate is in STEP units, so turning it into
+        # "how long may this world go unfed" needs the step<->wall mapping, which is
+        # only knowable by watching this engine actually run. Captured after the
+        # replay tail so catch-up substeps do not inflate the rate.
+        self._pace_wall0 = time.monotonic()
+        self._pace_step0 = int(getattr(self.engine, "_step", 0))
+
     @property
     def name(self) -> str:
         return self.manifest.get("name", self.dir.root.name)
+
+    def pace(self) -> dict:
+        """How long this world may go unfed before its beliefs stop being evidence.
+
+        Derived from the world's OWN physics, not a configured interval:
+
+          gamma_diss is the dissipative rate, per step, per role. It is not a spec
+          constant -- calibration channel 5 nudges `gamma_diss_{role}` from live
+          tracking error, so a world that discovers its beliefs decay faster than
+          declared will ask to be fed sooner, with nobody editing anything.
+
+          tau = 1/gamma is the decay time in STEPS; steps_per_s converts it to
+          seconds using this engine's measured rate rather than an assumed tick.
+
+        The FASTEST-decaying role sets the pace (max gamma -> min tau): a world is
+        as stale as its most perishable axis, not its average one.
+
+        Why not confidence: dissipation drives the qubit toward a PURE ground state,
+        so |r| RISES as a belief goes stale. A confidence-floor pacemaker would read
+        a fully-decayed world as maximally trustworthy -- the exact false-certainty
+        failure yurt-mood shipped for weeks. Age is the honest signal; confidence is
+        the compromised one.
+        """
+        now_wall = time.monotonic()
+        with self.lock:
+            step = int(getattr(self.engine, "_step", 0))
+            gammas: dict[str, float] = {}
+            graph = getattr(self.engine, "graph", None)
+            root_name = getattr(getattr(graph, "root", None), "name", None)
+            for node in (graph.nodes_with_roles() if graph is not None else []):
+                bundle = getattr(node, "param_bundle", None)
+                if bundle is None:
+                    continue
+                # The ROOT bundle is ENGINE DNA, not domain data — param_bundles.py
+                # says so explicitly, and seeds gamma_diss at 5.0 with bounds
+                # (0.5, 50.0) as a field-dynamics constant every world shares. A
+                # spec's per-node gamma_diss is a belief DECAY RATE on (0.0, 1.0):
+                # wargen-self's organs sit at 0.0003 while its root reads 5.0.
+                # Different quantity, different scale, four orders apart — so max()
+                # over both would let engine DNA set every world's heartbeat and
+                # peg it to the floor. A world with only a root falls back to the
+                # ceiling, which is honest; guessing from DNA would not be.
+                if node.name == root_name:
+                    continue
+                for role in (node.roles or ()):
+                    val = None
+                    for key in (f"gamma_diss_{role}", "gamma_diss"):
+                        if bundle.get_param(key) is not None:
+                            val = bundle.get(key)
+                            break
+                    if val:
+                        gammas[f"{node.name}.{role}"] = float(val)
+
+        elapsed = max(1e-9, now_wall - self._pace_wall0)
+        steps = step - self._pace_step0
+        steps_per_s = (steps / elapsed) if steps > 0 else None
+
+        hottest = max(gammas.items(), key=lambda kv: kv[1], default=(None, None))
+        gamma_max = hottest[1]
+        tau_steps = (1.0 / gamma_max) if gamma_max else None
+
+        # A step's WALL meaning is ingest_hold_s, and it is the only place wall time
+        # enters at all — engine.ingest() divides the gap since the last batch by
+        # ingest_hold_s and advances that many unit substeps, capped at
+        # _wall_catchup_max. Its own comment insists this is "cadence plumbing at
+        # the ingest membrane, NOT a time model", which is exactly why the honest
+        # conversion has to come from here rather than from a measured step rate:
+        # steps only happen on ingest, so steps-per-second measures HOW OFTEN WE
+        # FEED IT, not how fast it runs. Pacing on that is circular — a world fed
+        # rarely looks slow, so it gets fed even more rarely, forever.
+        hold = float(getattr(self.engine, "ingest_hold_s", 0) or 0)
+        cap = int(getattr(self.engine, "_wall_catchup_max", 32) or 32)
+
+        # Two independent deadlines; the world is due at whichever comes first.
+        #
+        # RESOLUTION — past hold*(cap+1) seconds the catch-up saturates and the
+        # excess wall time is simply dropped. The world does not decay more for
+        # waiting longer; it stops being able to represent the gap at all. This is
+        # a hard limit of the membrane, not a preference.
+        resolution_s = (hold * (cap + 1)) if hold else None
+        # DRIFT — each step relaxes the belief by about gamma toward the ground
+        # state, so a caller willing to tolerate `frac` of drift may skip frac/gamma
+        # steps, i.e. frac*tau_steps, i.e. that many holds of wall time.
+        drift_s = (tau_steps * hold) if (tau_steps and hold) else None
+
+        tau_s = None
+        for cand in (resolution_s, drift_s):
+            if cand and (tau_s is None or cand < tau_s):
+                tau_s = cand
+
+        age_s = None
+        if self.last_ts:
+            try:
+                last = datetime.fromisoformat(self.last_ts.replace("Z", "+00:00"))
+                age_s = (datetime.now(timezone.utc) - last).total_seconds()
+            except ValueError:
+                age_s = None
+
+        return {"world": self.name, "step": step,
+                "last_event_ts": self.last_ts or None, "age_s": age_s,
+                "steps_per_s": steps_per_s, "observed_steps": steps,
+                "hottest_axis": hottest[0], "gamma_max": gamma_max,
+                "tau_steps": tau_steps, "tau_s": tau_s,
+                "ingest_hold_s": hold or None, "wall_catchup_max": cap,
+                "resolution_s": resolution_s, "drift_s": drift_s,
+                "bound": ("resolution" if (resolution_s and tau_s == resolution_s)
+                          else ("drift" if drift_s and tau_s == drift_s else None)),
+                "gammas": gammas}
 
     # ── the ingest paths (both go through umwelt.events bucketing) ──────────────────
     def _ingest_rows(self, rows) -> dict:
@@ -315,6 +430,8 @@ class _Handler(BaseHTTPRequestHandler):
                 self._send(200, self.host.recommendations())
             elif url.path == "/bindings":
                 self._send(200, self.host.bindings())
+            elif url.path == "/pace":
+                self._send(200, self.host.pace())
             elif url.path == "/beliefs":
                 q = parse_qs(url.query)
                 self._send(200, self.host.belief(q["node"][0], q["role"][0]))
