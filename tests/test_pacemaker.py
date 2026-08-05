@@ -229,6 +229,69 @@ def test_failed_pulse_does_not_start_a_cooldown(monkeypatch, sup):
     assert "w" not in sup._pace_last
 
 
+# ── did the beat actually LAND? (transport success is not landing) ───────────
+
+def _reply(monkeypatch, body: bytes):
+    """Point _pulse's webhook at a scripted router reply."""
+    class _Resp:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def read(self): return body
+
+    monkeypatch.setattr(sup_mod.urllib.request, "urlopen",
+                        lambda req, timeout=None: _Resp())
+
+
+def test_refused_pulse_is_recorded_as_not_landed(monkeypatch, sup):
+    """The measured 2026-08-04 failure: seven worlds were pulsed ~40x/day at an
+    actuator nobody had registered. The router answered `{"ok": true}` to every
+    one, so the heart logged success while the worlds aged past a thousand tau."""
+    _reply(monkeypatch, b'{"ok": false, "accepted": false, "reason": "unknown_actuator"}')
+    sup._pulse("lease-drill", {"age_s": 1_500_000.0, "interval_s": 165.0})
+    out = sup._pace_outcome["lease-drill"]
+    assert out["landed"] is False
+    assert out["reason"] == "unknown_actuator"
+
+
+def test_refused_pulse_still_starts_a_cooldown(monkeypatch, sup):
+    """A registry gap is permanent. Retrying it every watchdog tick would hot-loop
+    the router forever, so a DELIVERED-and-refused beat keeps its cooldown — unlike
+    a transport failure, which must be retried."""
+    _reply(monkeypatch, b'{"ok": false, "accepted": false, "reason": "unknown_actuator"}')
+    assert sup._pulse("lease-drill", {"age_s": 9999.0, "interval_s": 165.0}) is True
+
+
+def test_accepted_pulse_is_recorded_as_landed(monkeypatch, sup):
+    _reply(monkeypatch, b'{"ok": true, "accepted": true}')
+    sup._pulse("hive-ops", {"age_s": 9999.0, "interval_s": 100.0})
+    assert sup._pace_outcome["hive-ops"]["landed"] is True
+
+
+def test_router_without_accepted_field_reads_as_landed(monkeypatch, sup):
+    """Version skew must not manufacture a fleet of phantom failures: a router that
+    predates the `accepted` field is not evidence that nothing is landing."""
+    _reply(monkeypatch, b'{"ok": true}')
+    sup._pulse("hive-ops", {"age_s": 1.0, "interval_s": 100.0})
+    assert sup._pace_outcome["hive-ops"]["landed"] is True
+
+
+def test_unparseable_router_reply_reads_as_landed(monkeypatch, sup):
+    _reply(monkeypatch, b'not json at all')
+    sup._pulse("hive-ops", {"age_s": 1.0, "interval_s": 100.0})
+    assert sup._pace_outcome["hive-ops"]["landed"] is True
+
+
+def test_transport_failure_records_not_landed(monkeypatch, sup):
+    """Distinct from refusal: the beat never arrived, so it is both not-landed AND
+    retried (returns False -> no cooldown)."""
+    def _boom(req, timeout=None):
+        raise OSError("router down")
+    monkeypatch.setattr(sup_mod.urllib.request, "urlopen", _boom)
+    assert sup._pulse("w", {"age_s": 1.0}) is False
+    assert sup._pace_outcome["w"]["landed"] is False
+    assert "transport" in sup._pace_outcome["w"]["reason"]
+
+
 # ── the worker-side derivation: where wall time actually comes from ──────────
 
 class _FakeBundle:

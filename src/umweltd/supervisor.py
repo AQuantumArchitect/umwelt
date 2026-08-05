@@ -111,6 +111,12 @@ class Supervisor:
         self._watchdog_disabled: set[str] = set()
         self._pace_last: dict[str, float] = {}
         self._pace_rank: list[dict] = []
+        # Per world: did the LAST beat actually land? Transport success is not
+        # landing — a pulse at an actuator nobody registered used to return
+        # `{"ok": true}` like any other, so the heart reported 280 successful
+        # beats a day into the void. Surfaced on /pace so a detached limb is a
+        # queryable fact rather than something you find by grepping a log.
+        self._pace_outcome: dict[str, dict] = {}
 
     def worlds_root(self) -> Path:
         root = home() / "worlds"
@@ -455,12 +461,37 @@ class Supervisor:
             req = urllib.request.Request(
                 PACE_WEBHOOK, data=json.dumps(payload).encode(), method="POST",
                 headers={"Content-Type": "application/json"})
-            urllib.request.urlopen(req, timeout=PACE_TIMEOUT_S)
-            logger.info("pacemaker: pulsed %r (age %.0fs >= %.0fs, tau %s)",
-                        name, detail.get("age_s") or -1, detail.get("interval_s") or -1,
-                        detail.get("tau_s"))
+            with urllib.request.urlopen(req, timeout=PACE_TIMEOUT_S) as resp:
+                raw = resp.read()
+            # `accepted` says the actuator EXISTS and the decision was ON. It is
+            # not a success claim — the action runs after the response. An older
+            # router has no such field; absence reads as accepted so a version
+            # skew does not manufacture a fleet of phantom failures.
+            try:
+                body = json.loads(raw) if raw else {}
+            except (ValueError, TypeError):
+                body = {}
+            accepted = body.get("accepted", True) is not False
+            reason = body.get("reason") or ""
+            self._pace_outcome[name] = {"at": time.time(), "landed": bool(accepted),
+                                        "reason": reason}
+            if accepted:
+                logger.info("pacemaker: pulsed %r (age %.0fs >= %.0fs, tau %s)",
+                            name, detail.get("age_s") or -1,
+                            detail.get("interval_s") or -1, detail.get("tau_s"))
+            else:
+                # Deliberately NOT a return of False. False means "no cooldown,
+                # retry next tick", which is right for a dead router and wrong
+                # for a permanent registry gap — that would hot-loop the router
+                # every watchdog tick forever. A beat that was delivered and
+                # refused is still a delivered beat; it just did not land.
+                logger.warning("pacemaker: pulse for %r was REFUSED by the router "
+                               "(%s) — the world is not being fed", name,
+                               reason or "no reason given")
             return True
         except Exception as exc:                     # noqa: BLE001 — a dead router must not kill the loop
+            self._pace_outcome[name] = {"at": time.time(), "landed": False,
+                                        "reason": f"transport: {exc!r}"}
             logger.warning("pacemaker: pulse for %r failed: %r", name, exc)
             return False
 
@@ -560,11 +591,18 @@ class _Handler(BaseHTTPRequestHandler):
             elif parts == ["pace"] and method == "GET":
                 # The heart, visible. Shows every world's derived interval and its
                 # rank, so "why has nothing fed X" is answerable without reading logs.
+                # `last_pulse` is grafted on at read time rather than stored in the
+                # rank rows, because the rank is rebuilt every tick from the
+                # workers' own numbers and the outcome outlives any single tick.
+                _rank = [dict(r, last_pulse=self.sup._pace_outcome.get(r.get("world")))
+                         for r in self.sup._pace_rank]
                 self._send(200, {
                     "enabled": PACE_ENABLED, "fraction": PACE_FRACTION,
                     "floor_s": PACE_FLOOR_S, "ceiling_s": PACE_CEILING_S,
                     "webhook": PACE_WEBHOOK, "budget": self.sup.service_budget(),
-                    "worlds": self.sup._pace_rank})
+                    "unfed": sorted(w for w, o in self.sup._pace_outcome.items()
+                                    if not o.get("landed")),
+                    "worlds": _rank})
             elif parts == ["worlds"] and method == "POST":
                 self._send(201, self.sup.create(json.loads(raw or b"{}")))
             elif len(parts) >= 2 and parts[0] == "worlds":
