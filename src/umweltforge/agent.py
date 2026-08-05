@@ -39,9 +39,23 @@ class ForgeAgent(Protocol):
 class ClaudeForgeAgent:
     """The production agent: one Claude Agent SDK session, cwd-scoped, tool-restricted.
 
-    Auth is the ANTHROPIC_API_KEY env var (the SDK reads it directly). Deliberately
-    thin — everything behind the seam so SDK API drift stays a one-file fix and no
-    repo test ever imports it.
+    Deliberately thin — everything behind the seam so SDK API drift stays a
+    one-file fix and no repo test ever imports it.
+
+    AUTH, and the house rule (Luke, 2026-08-05): local work runs on the
+    SUBSCRIPTION, not a key. The SDK spawns a bundled Claude Code CLI, which
+    reads the OAuth credentials `claude /login` writes — so a logged-in box needs
+    no ANTHROPIC_API_KEY at all, and setting one is the wrong move locally.
+
+    The failure mode this docstring used to cause: a desktop Claude install being
+    signed in does NOT log the CLI in. They keep separate credential stores, and
+    the SDK's bundled CLI is a third one again. Measured here — desktop app
+    signed in, and both CLIs answered `-p` with "Not logged in · Please run
+    /login" while ~/.claude/.credentials.json did not exist. So "I'm obviously
+    logged in" is not evidence; the credentials file is.
+
+    An API key belongs to a DEPLOYED product, not to this seam, and is requested
+    through butler-rook rather than pasted into an environment.
     """
 
     def __init__(self, *, model: "str | None" = None):
@@ -51,8 +65,9 @@ class ClaudeForgeAgent:
             raise RuntimeError(
                 "the forge's embedded agent needs the Claude Agent SDK:\n"
                 '    pip install "umwelt-engine[forge]"\n'
-                "and an Anthropic API key in the environment:\n"
-                "    export ANTHROPIC_API_KEY=sk-ant-...\n"
+                "and a logged-in Claude Code CLI (local work runs on the\n"
+                "subscription — do NOT set ANTHROPIC_API_KEY for this):\n"
+                "    claude /login\n"
                 "(offline/scripted agents: set UMWELT_FORGE_AGENT=module:factory)"
             ) from exc
         self.model = model
